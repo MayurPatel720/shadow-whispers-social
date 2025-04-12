@@ -1,22 +1,20 @@
 
 const express = require('express');
+const app = express();
+const morgan = require('morgan');
+
 const dotenv = require('dotenv');
 const cors = require('cors');
-const connectDB = require('./configs/dbConnect');
+const ConnectTODB = require("./configs/dbConnect");
 const indexRoutes = require('./routes/indexRoutes');
 const userRoutes = require('./routes/userRoutes');
 const ghostCircleRoutes = require('./routes/ghostCircleRoutes');
 const postRoutes = require('./routes/postRoutes');
 const whisperRoutes = require('./routes/whisperRoutes');
 
-// Load environment variables
 dotenv.config();
+ConnectTODB();
 
-// Connect to database
-connectDB();
-
-// Initialize express
-const app = express();
 
 // Middleware
 app.use(cors({
@@ -28,8 +26,8 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(morgan('dev'));
 
-// Routes
 app.use('/api', indexRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ghost-circles', ghostCircleRoutes);
@@ -49,6 +47,5 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
