@@ -5,6 +5,9 @@ const cors = require('cors');
 const connectDB = require('./configs/dbConnect');
 const indexRoutes = require('./routes/indexRoutes');
 const userRoutes = require('./routes/userRoutes');
+const ghostCircleRoutes = require('./routes/ghostCircleRoutes');
+const postRoutes = require('./routes/postRoutes');
+const whisperRoutes = require('./routes/whisperRoutes');
 
 // Load environment variables
 dotenv.config();
@@ -23,6 +26,9 @@ app.use(express.urlencoded({ extended: false }));
 // Routes
 app.use('/api', indexRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/ghost-circles', ghostCircleRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/whispers', whisperRoutes);
 
 // Error handler middleware
 app.use((err, req, res, next) => {
