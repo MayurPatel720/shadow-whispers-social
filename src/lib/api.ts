@@ -1,0 +1,96 @@
+
+import axios from 'axios';
+
+// Create axios instance with base URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add a request interceptor to include JWT token in requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Auth API calls
+export const loginUser = async (email: string, password: string) => {
+  const response = await api.post('/users/login', { email, password });
+  return response.data;
+};
+
+export const registerUser = async (username: string, email: string, password: string) => {
+  const response = await api.post('/users/register', { username, email, password });
+  return response.data;
+};
+
+export const getUserProfile = async () => {
+  const response = await api.get('/users/profile');
+  return response.data;
+};
+
+// Friend API calls
+export const addFriend = async (friendUsername: string) => {
+  const response = await api.post('/users/friends', { friendUsername });
+  return response.data;
+};
+
+// Ghost Circles API calls
+export const createGhostCircle = async (name: string, description: string) => {
+  const response = await api.post('/ghost-circles', { name, description });
+  return response.data;
+};
+
+export const getMyGhostCircles = async () => {
+  const response = await api.get('/ghost-circles');
+  return response.data;
+};
+
+export const inviteToGhostCircle = async (circleId: string, username: string) => {
+  const response = await api.post(`/ghost-circles/${circleId}/invite`, { username });
+  return response.data;
+};
+
+// Posts API calls
+export const createPost = async (content: string, ghostCircleId?: string) => {
+  const response = await api.post('/posts', { content, ghostCircleId });
+  return response.data;
+};
+
+export const getGlobalFeed = async () => {
+  const response = await api.get('/posts/global');
+  return response.data;
+};
+
+export const likePost = async (postId: string) => {
+  const response = await api.put(`/posts/${postId}/like`);
+  return response.data;
+};
+
+// Whispers API calls
+export const sendWhisper = async (receiverId: string, content: string) => {
+  const response = await api.post('/whispers', { receiverId, content });
+  return response.data;
+};
+
+export const getMyWhispers = async () => {
+  const response = await api.get('/whispers');
+  return response.data;
+};
+
+export const getWhisperConversation = async (userId: string) => {
+  const response = await api.get(`/whispers/${userId}`);
+  return response.data;
+};
+
+export default api;
