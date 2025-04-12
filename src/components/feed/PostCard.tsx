@@ -30,9 +30,10 @@ interface PostCardProps {
     };
     clueCount: number;
   };
+  currentUserId?: string; // Add this line to include currentUserId in props
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, currentUserId }) => {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes);
 
