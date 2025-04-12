@@ -21,8 +21,8 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' ? [
-    'https://your-frontend-domain.com',  // Replace with your actual frontend domain when deployed
-    'http://localhost:3000'  // For local development
+    'https://shadow-whispers-social.lovable.app/',  
+    'http://localhost:3000'  
   ] : '*',
   credentials: true
 }));
