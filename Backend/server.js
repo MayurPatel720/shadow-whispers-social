@@ -26,6 +26,7 @@ ConnectTODB();
 // }));
 app.use(cors({
   origin: [
+
     'https://shadow-whispers-social.lovable.app', 
     'http://localhost:8080'
   ], 
