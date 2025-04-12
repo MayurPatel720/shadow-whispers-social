@@ -17,12 +17,21 @@ ConnectTODB();
 
 
 // Middleware
+// app.use(cors({
+//   origin: process.env.NODE_ENV === 'production' ? [
+//     'https://shadow-whispers-social.lovable.app/',  
+//     'http://localhost:3000'  
+//   ] : '*',
+//   credentials: true
+// }));
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? [
-    'https://shadow-whispers-social.lovable.app/',  
-    'http://localhost:3000'  
-  ] : '*',
-  credentials: true
+  origin: [
+    'https://shadow-whispers-social.lovable.app', 
+    'http://localhost:8080'
+  ], 
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], 
+  allowedHeaders: ['Content-Type', 'Authorization'], 
+  credentials: true,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

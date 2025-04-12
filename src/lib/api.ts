@@ -2,13 +2,15 @@ import axios from 'axios';
 
 // Create axios instance with base URL
 // Use a default API URL that works with the development environment
-const API_URL = import.meta.env.VITE_API_URL || 'https://undercover-service.onrender.com';
+// const API_URL = 'https://undercover-service.onrender.com';
+const API_URL = 'http://localhost:8900';
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Ensure credentials (like cookies) are included
 });
 
 // Add a request interceptor to include JWT token in requests
@@ -23,21 +25,35 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Add a response interceptor to handle token expiration or other errors
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response.status === 401) {
+      // Handle token expiration or unauthorized errors
+      console.log('Unauthorized, handling token refresh or re-login...');
+      // Implement token refresh logic here if you have refresh tokens
+      // Alternatively, trigger a logout action
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth API calls
 export const loginUser = async (email: string, password: string) => {
-  const response = await api.post('/users/login', { email, password });
+  const response = await api.post('/api/users/login', { email, password });
   return response.data;
 };
 
 export const registerUser = async (username: string, fullName: string, email: string, password: string) => {
   try {
     console.log('Attempting to register user with:', { username, fullName, email });
-    const response = await api.post('/users/register', { username, fullName, email, password });
+    const response = await api.post('/api/users/register', { username, fullName, email, password });
     console.log('Registration response:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Registration error:', error);
-    throw error;
+    console.error('Registration error:', error.response || error);
+    throw new Error(error?.response?.data?.message || 'An error occurred during registration');
   }
 };
 
@@ -74,7 +90,7 @@ export const createPost = async (content: string, ghostCircleId?: string) => {
 };
 
 export const getGlobalFeed = async () => {
-  const response = await api.get('/posts/global');
+  const response = await api.get('/api/posts/global');
   return response.data;
 };
 
