@@ -36,12 +36,10 @@ app.use('/api/ghost-circles', ghostCircleRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/whispers', whisperRoutes);
 
-// Health check endpoint for Render
 app.get('/healthcheck', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// Error handler middleware
 app.use((err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   res.status(statusCode);
