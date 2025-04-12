@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base URL
 // Use a default API URL that works with the development environment
-const API_URL = import.meta.env.VITE_API_URL || 'https://shadow-whispers-social.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || 'https://undercover-service.onrender.com';
 
 const api = axios.create({
   baseURL: API_URL,
