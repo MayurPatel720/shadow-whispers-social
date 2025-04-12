@@ -1,7 +1,7 @@
-
 import axios from 'axios';
 
 // Create axios instance with base URL
+// Use a default API URL that works with the development environment
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
@@ -30,8 +30,15 @@ export const loginUser = async (email: string, password: string) => {
 };
 
 export const registerUser = async (username: string, fullName: string, email: string, password: string) => {
-  const response = await api.post('/users/register', { username, fullName, email, password });
-  return response.data;
+  try {
+    console.log('Attempting to register user with:', { username, fullName, email });
+    const response = await api.post('/users/register', { username, fullName, email, password });
+    console.log('Registration response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Registration error:', error);
+    throw error;
+  }
 };
 
 export const getUserProfile = async () => {
@@ -39,7 +46,6 @@ export const getUserProfile = async () => {
   return response.data;
 };
 
-// Friend API calls
 export const addFriend = async (friendUsername: string) => {
   const response = await api.post('/users/friends', { friendUsername });
   return response.data;

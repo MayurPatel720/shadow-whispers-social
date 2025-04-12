@@ -74,7 +74,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (username: string, fullName: string, email: string, password: string) => {
     try {
       setIsLoading(true);
+      console.log('Registering user with data:', { username, fullName, email });
       const data = await registerUser(username, fullName, email, password);
+      console.log('Registration successful, data received:', data);
+      
       localStorage.setItem('token', data.token);
       setUser(data);
       toast({
@@ -84,10 +87,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       navigate('/');
     } catch (error: any) {
       console.error('Registration failed', error);
+      
+      // More detailed error handling
+      let errorMessage = "Registration failed";
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        errorMessage = error.response.data?.message || "Server error: " + error.response.status;
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage = "No response from server. Please check your connection.";
+      } else {
+        // Something happened in setting up the request
+        errorMessage = error.message || "Unknown error occurred";
+      }
+      
       toast({
         variant: "destructive",
         title: "Registration failed",
-        description: error.response?.data?.message || "Registration failed",
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
