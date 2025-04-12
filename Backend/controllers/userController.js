@@ -7,7 +7,7 @@ const { generateToken } = require('../utils/jwtHelper');
 // @route   POST /api/users/register
 // @access  Public
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, fullName, email, password } = req.body;
 
   // Check if user exists
   const userExists = await User.findOne({ $or: [{ email }, { username }] });
@@ -17,9 +17,10 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
-  // Create user
+  // Create user with fullName
   const user = await User.create({
     username,
+    fullName,
     email,
     password,
   });
@@ -32,6 +33,7 @@ const registerUser = asyncHandler(async (req, res) => {
     res.status(201).json({
       _id: user._id,
       username: user.username,
+      fullName: user.fullName,
       email: user.email,
       anonymousAlias: user.anonymousAlias,
       avatarEmoji: user.avatarEmoji,
@@ -56,6 +58,7 @@ const loginUser = asyncHandler(async (req, res) => {
     res.json({
       _id: user._id,
       username: user.username,
+      fullName: user.fullName,
       email: user.email,
       anonymousAlias: user.anonymousAlias,
       avatarEmoji: user.avatarEmoji,
@@ -77,6 +80,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
     res.json({
       _id: user._id,
       username: user.username,
+      fullName: user.fullName,
       email: user.email,
       anonymousAlias: user.anonymousAlias,
       avatarEmoji: user.avatarEmoji,

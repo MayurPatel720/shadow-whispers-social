@@ -7,14 +7,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const registerSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters' }),
+  fullName: z.string().min(2, { message: 'Please enter your full name' }),
   email: z.string().email({ message: 'Please enter a valid email' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   confirmPassword: z.string(),
+  isAdult: z.boolean().refine(val => val === true, {
+    message: 'You must be at least 18 years old to use this platform',
+  })
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
@@ -29,14 +34,16 @@ const Register: React.FC = () => {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       username: '',
+      fullName: '',
       email: '',
       password: '',
       confirmPassword: '',
+      isAdult: false,
     },
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
-    await registerUser(data.username, data.email, data.password);
+    await registerUser(data.username, data.fullName, data.email, data.password);
   };
 
   return (
@@ -68,6 +75,28 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
+              
+              <FormField
+                control={form.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Your real name (kept private)" 
+                        className="bg-gray-700 border-gray-600" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs text-gray-400">
+                      Your real name is kept private and only visible to you.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
               <FormField
                 control={form.control}
                 name="email"
@@ -85,6 +114,7 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
+              
               <FormField
                 control={form.control}
                 name="password"
@@ -103,6 +133,7 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
+              
               <FormField
                 control={form.control}
                 name="confirmPassword"
@@ -121,6 +152,32 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
+              
+              <FormField
+                control={form.control}
+                name="isAdult"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-gray-700 p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-purple-500"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        I confirm I am at least 18 years old
+                      </FormLabel>
+                      <FormDescription className="text-xs text-gray-400">
+                        This platform is intended for adults only.
+                      </FormDescription>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
               <Button 
                 type="submit" 
                 className="w-full bg-purple-600 hover:bg-purple-700" 

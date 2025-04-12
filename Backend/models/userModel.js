@@ -10,6 +10,11 @@ const userSchema = mongoose.Schema(
       unique: true,
       trim: true,
     },
+    fullName: {
+      type: String,
+      required: [true, 'Please add your full name'],
+      trim: true,
+    },
     email: {
       type: String,
       required: [true, 'Please add an email'],

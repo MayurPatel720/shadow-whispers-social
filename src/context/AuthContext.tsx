@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 interface User {
   _id: string;
   username: string;
+  fullName: string;
   email: string;
   anonymousAlias: string;
   avatarEmoji: string;
@@ -17,7 +18,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (username: string, fullName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -70,15 +71,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (username: string, email: string, password: string) => {
+  const register = async (username: string, fullName: string, email: string, password: string) => {
     try {
       setIsLoading(true);
-      const data = await registerUser(username, email, password);
+      const data = await registerUser(username, fullName, email, password);
       localStorage.setItem('token', data.token);
       setUser(data);
       toast({
         title: "Registration successful",
-        description: `Welcome, ${data.username}!`,
+        description: `Welcome, ${data.anonymousAlias}! Your anonymous identity has been created.`,
       });
       navigate('/');
     } catch (error: any) {
