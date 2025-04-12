@@ -19,7 +19,13 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? [
+    'https://your-frontend-domain.com',  // Replace with your actual frontend domain when deployed
+    'http://localhost:3000'  // For local development
+  ] : '*',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -29,6 +35,11 @@ app.use('/api/users', userRoutes);
 app.use('/api/ghost-circles', ghostCircleRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/whispers', whisperRoutes);
+
+// Health check endpoint for Render
+app.get('/healthcheck', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
 
 // Error handler middleware
 app.use((err, req, res, next) => {
