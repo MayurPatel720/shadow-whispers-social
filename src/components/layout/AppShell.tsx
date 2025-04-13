@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   PlusCircle,
+  Sidebar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import WhisperModal from "../whisper/WhisperModal";
@@ -57,7 +58,7 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return {
       emoji: user?.avatarEmoji || '🎭',
       nickname: user?.anonymousAlias || 'Anonymous',
-      color: '#6E59A5', // Default purple color
+      color: '#6E59A5', 
     };
   }, [user]);
 
@@ -291,3 +292,6 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 export default AppShell;
+
+
+

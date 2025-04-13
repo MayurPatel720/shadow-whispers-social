@@ -17,19 +17,16 @@ const nouns = [
   "Guardian", "Sentinel", "Keeper", "Walker", "Drifter"
 ];
 
-// List of emoji for avatars
 const avatarEmojis = [
   "🎭", "👻", "🕶️", "🦊", "🐺", "🦉", "🦅", "🦇", "🐲", 
   "🌑", "✨", "💫", "⚡", "🔮", "🎪", "🎯", "🎲", "🃏", 
   "🦹", "🥷", "👤", "👥", "🕵️", "🧙", "🧠", "👁️", "💭"
 ];
 
-// Generate random avatar emoji
 export const getRandomEmoji = (): string => {
   return avatarEmojis[Math.floor(Math.random() * avatarEmojis.length)];
 };
 
-// Generate random nickname
 export const generateNickname = (): string => {
   const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
@@ -48,7 +45,6 @@ export const getRandomColor = (): string => {
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
-// Generate a unique identity
 export const generateIdentity = () => {
   return {
     nickname: generateNickname(),
