@@ -7,31 +7,58 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserRound, Settings, LogOut, Image, Grid, Edit, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getUserProfile } from "@/lib/api";
+import { getUserProfile, getUserPosts } from "@/lib/api";
 import PostCard from "../feed/PostCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import EditProfileModal from "./EditProfileModal";
+import { toast } from "@/hooks/use-toast";
 
 const ProfileComponent = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   
-  const { data: profileData, isLoading, refetch } = useQuery({
+  const { data: profileData, isLoading: profileLoading } = useQuery({
     queryKey: ['userProfile'],
     queryFn: getUserProfile,
-    enabled: !!user
+    enabled: !!user,
+    meta: {
+      onError: (error) => {
+        toast({
+          variant: "destructive",
+          title: "Failed to load profile",
+          description: "Could not retrieve your profile information."
+        });
+      }
+    }
+  });
+  
+  const { data: userPosts, isLoading: postsLoading, refetch } = useQuery({
+    queryKey: ['userPosts', user?._id],
+    queryFn: () => getUserPosts(user?._id),
+    enabled: !!user?._id,
+    meta: {
+      onError: (error) => {
+        toast({
+          variant: "destructive",
+          title: "Failed to load posts",
+          description: "Could not retrieve your posts."
+        });
+      }
+    }
   });
 
   const handleRefreshPosts = () => {
     refetch();
   };
 
+  const isLoading = profileLoading || postsLoading;
+
   if (!user) return null;
 
   const userStats = {
-    posts: profileData?.posts?.length || 0,
+    posts: userPosts?.length || 0,
     followers: profileData?.identityRecognizers?.length || 0,
     following: profileData?.recognizedUsers?.length || 0
   };
@@ -119,9 +146,9 @@ const ProfileComponent = () => {
                 <Skeleton key={i} className="h-64 w-full" />
               ))}
             </div>
-          ) : profileData?.posts && profileData.posts.length > 0 ? (
+          ) : userPosts && userPosts.length > 0 ? (
             <div className="space-y-4">
-              {profileData.posts.map((post) => (
+              {userPosts.map((post) => (
                 <PostCard 
                   key={post._id} 
                   post={post} 
@@ -167,7 +194,12 @@ const ProfileComponent = () => {
                 </Button>
                 <Button 
                   variant="destructive" 
-                  onClick={logout}
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to log out?")) {
+                      const { logout } = useAuth();
+                      logout();
+                    }
+                  }}
                   className="justify-start"
                 >
                   <LogOut size={16} className="mr-2" />

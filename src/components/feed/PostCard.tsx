@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import AvatarGenerator from "../user/AvatarGenerator";
 import { useAuth } from "@/context/AuthContext";
-import { likePost, addComment, getComments } from "@/lib/api";
+import { likePost, addComment, getComments, deletePost } from "@/lib/api";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import EditPostModal from "./EditPostModal";
@@ -142,16 +142,24 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId, onRefresh, sho
     nickname: post.anonymousAlias || "Anonymous",
     color: "#9333EA", // Default purple color
   };
+  
+  // Process image URL to ensure it's valid
+  const imageUrl = post.imageUrl ? (
+    post.imageUrl.startsWith('http') ? post.imageUrl : `${process.env.REACT_APP_API_URL || 'https://undercover-service.onrender.com'}${post.imageUrl}`
+  ) : null;
 
   return (
     <Card className="border border-undercover-purple/20 bg-card shadow-md hover:shadow-lg transition-shadow mb-4">
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start">
-          <AvatarGenerator 
-            emoji={identity.emoji} 
-            nickname={identity.nickname} 
-            color={identity.color}
-          />
+          <div className="flex items-center space-x-2">
+            <AvatarGenerator 
+              emoji={identity.emoji} 
+              nickname={identity.nickname} 
+              color={identity.color}
+            />
+            <span className="font-medium text-sm">{identity.nickname}</span>
+          </div>
           
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{postTime}</span>
@@ -185,15 +193,17 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId, onRefresh, sho
       <CardContent className="p-4 pt-2">
         <p className="text-sm text-foreground mb-2">{post.content}</p>
         
-        {post.imageUrl && (
+        {imageUrl && (
           <div className="mt-3 rounded-md overflow-hidden">
             <img 
-              src={post.imageUrl} 
+              src={imageUrl} 
               alt="Post image" 
               className="w-full h-auto max-h-80 object-cover"
               onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = "/placeholder.svg";
+                const target = e.target as HTMLImageElement;
+                console.error("Image failed to load:", target.src);
+                target.onerror = null;
+                target.src = "/placeholder.svg";
               }}
             />
           </div>
