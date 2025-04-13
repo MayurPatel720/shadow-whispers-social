@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getGlobalFeed } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -14,19 +16,18 @@ const GlobalFeed = () => {
   
   const { data: posts, isLoading, error, refetch } = useQuery({
     queryKey: ['globalFeed'],
-    queryFn: getGlobalFeed
-  });
-
-  useEffect(() => {
-    if (error) {
-      console.error("Error fetching posts:", error);
-      toast({
-        variant: "destructive",
-        title: "Error loading posts",
-        description: "Could not load the latest posts. Please try again later."
-      });
+    queryFn: getGlobalFeed,
+    meta: {
+      onError: (error) => {
+        console.error("Error fetching posts:", error);
+        toast({
+          variant: "destructive",
+          title: "Error loading posts",
+          description: "Could not load the latest posts. Please try again later."
+        });
+      }
     }
-  }, [error]);
+  });
 
   const handleRefresh = () => {
     refetch();

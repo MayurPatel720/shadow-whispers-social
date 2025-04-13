@@ -76,6 +76,59 @@ const getGlobalFeed = asyncHandler(async (req, res) => {
   res.json(posts);
 });
 
+// controllers/postController.js
+const addComment = asyncHandler(async (req, res) => {
+  const { content, anonymousAlias } = req.body;
+  console.log(req.body);
+  
+  // Validate input fields
+  if (!content || !anonymousAlias) {
+    return res.status(400).json({ message: 'Comment content and alias are required' });
+  }
+
+  try {
+    // Find the post
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Create the new comment object
+    const newComment = {
+      user: req.user._id, // comes from auth middleware
+      content,
+      anonymousAlias,
+    };
+
+    // Add new comment to the beginning of the comments array
+    post.comments.unshift(newComment);
+
+    // Save the post with the new comment
+    await post.save();
+
+    res.status(201).json({
+      message: 'Comment added successfully',
+      comment: newComment,
+    });
+  } catch (err) {
+    // Handle server error
+    res.status(500).json({
+      message: 'Server error',
+      error: err.message,
+    });
+  }
+});
+
+
+const getComments = asyncHandler(async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) {
+    res.status(404);
+    throw new Error('Post not found');
+  }
+  res.json(post.comments);
+});
+
 // @desc    Get ghost circle posts
 // @route   GET /api/posts/circle/:id
 // @access  Private
@@ -232,4 +285,6 @@ module.exports = {
   getGhostCirclePosts,
   likePost,
   recognizeUser,
+  getComments,
+  addComment
 };

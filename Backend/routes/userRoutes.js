@@ -5,6 +5,7 @@ const {
   registerUser,
   loginUser,
   getUserProfile,
+  updateUserProfile,
   addFriend,
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
@@ -15,6 +16,7 @@ router.post('/login', loginUser);
 
 // Private routes
 router.get('/profile', protect, getUserProfile);
+router.put('/profile', protect, updateUserProfile);
 router.post('/friends', protect, addFriend);
 
 module.exports = router;

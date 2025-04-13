@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import axios from 'axios';
 
@@ -63,6 +64,11 @@ export const getUserProfile = async () => {
   return response.data;
 };
 
+export const updateUserProfile = async (userData: any) => {
+  const response = await api.put('/api/users/profile', userData);
+  return response.data;
+};
+
 export const addFriend = async (friendUsername: string) => {
   const response = await api.post('/api/users/friends', { friendUsername });
   return response.data;
@@ -84,9 +90,48 @@ export const inviteToGhostCircle = async (circleId: string, username: string) =>
   return response.data;
 };
 
-// Posts API calls
-export const createPost = async (content: string, ghostCircleId?: string) => {
-  const response = await api.post('/api/posts', { content, ghostCircleId });
+export const createPost = async (
+  content: string,
+  ghostCircleId?: string,
+  imageUrl?: string
+) => {
+  try {
+    const postData = {
+      content,
+      ...(ghostCircleId && { ghostCircleId }),
+      ...(imageUrl && { imageUrl }),
+    };
+
+    const response = await api.post('/api/posts', postData);
+    return response.data;
+  } catch (error: any) {
+    console.error('Error creating post:', error);
+    throw error?.response?.data || error;
+  }
+};
+
+
+export const updatePost = async (postId: string, content: string, imageUrl?: string) => {
+  const postData: {
+    content: string;
+    imageUrl?: string;
+  } = { content };
+  
+  if (imageUrl !== undefined) {
+    postData.imageUrl = imageUrl;
+  }
+  
+  const response = await api.put(`/api/posts/${postId}`, postData);
+  return response.data;
+};
+
+export const deletePost = async (postId: string) => {
+  const response = await api.delete(`/api/posts/${postId}`);
+  return response.data;
+};
+
+export const getUserPosts = async (userId: string) => {
+  const response = await api.get(`/api/posts/user/${userId}`);
   return response.data;
 };
 
@@ -100,6 +145,25 @@ export const likePost = async (postId: string) => {
   return response.data;
 };
 
+// Comments API calls
+export const addComment = async (postId: string, content: string, anonymousAlias: string) => {
+  console.log(content, anonymousAlias);
+  const response = await api.post(`/api/posts/${postId}/comments`, { content, anonymousAlias });
+  
+  return response.data;
+};
+
+
+export const getComments = async (postId: string) => {
+  try {
+    const response = await api.get(`/api/posts/${postId}/comments`);
+    return response.data; // This will return the comments data
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    // Handle errors or return an empty array in case of failure
+    return [];
+  }
+};
 // Whispers API calls
 export const sendWhisper = async (receiverId: string, content: string) => {
   const response = await api.post('/api/whispers', { receiverId, content });

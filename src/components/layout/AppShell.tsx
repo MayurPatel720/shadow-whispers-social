@@ -9,13 +9,12 @@ import {
   Menu,
   X,
   PlusCircle,
-  Sidebar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import WhisperModal from "../whisper/WhisperModal";
 import { useAuth } from "@/context/AuthContext";
 import AvatarGenerator from "../user/AvatarGenerator";
-
+import { useNavigate } from "react-router-dom";
 const NavItem: React.FC<{
   icon: React.ReactNode;
   label: string;
@@ -39,15 +38,11 @@ const NavItem: React.FC<{
 };
 
 const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState("Home");
   const [whisperModalOpen, setWhisperModalOpen] = useState(false);
   const { user } = useAuth();
-  
-  const handleTabClick = (tab: string) => {
-    setCurrentTab(tab);
-    setMobileMenuOpen(false);
-  };
 
   const openWhisperModal = () => {
     setWhisperModalOpen(true);
@@ -56,9 +51,9 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const userIdentity = React.useMemo(() => {
     return {
-      emoji: user?.avatarEmoji || '🎭',
-      nickname: user?.anonymousAlias || 'Anonymous',
-      color: '#6E59A5', 
+      emoji: user?.avatarEmoji || "🎭",
+      nickname: user?.anonymousAlias || "Anonymous",
+      color: "#6E59A5",
     };
   }, [user]);
 
@@ -73,16 +68,20 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
 
         <div className="p-4">
-          <div className="bg-undercover-dark rounded-lg p-3 mb-6 border border-undercover-purple/20">
+          <div className="flex justify-center items-center gap-3 bg-undercover-dark rounded-lg p-3 mb-6 border border-undercover-purple/20">
             <AvatarGenerator
               emoji={userIdentity.emoji}
-              nickname={userIdentity.nickname}
+              nickname={user.anonymousAlias}
               color={userIdentity.color}
               size="md"
             />
-            <p className="mt-2 text-xs text-muted-foreground">
+            <div className="">
+
+            <h2 className="text-lg font-bold">{user.anonymousAlias}</h2>
+            <p className="text-xs text-muted-foreground">
               Your anonymous identity
             </p>
+            </div>
           </div>
 
           <div className="space-y-1">
@@ -90,37 +89,37 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               icon={<Home size={18} />}
               label="Home"
               active={currentTab === "Home"}
-              onClick={() => handleTabClick("Home")}
+              onClick={() => navigate("/")}
             />
             <NavItem
               icon={<Search size={18} />}
               label="Discover"
               active={currentTab === "Discover"}
-              onClick={() => handleTabClick("Discover")}
+              onClick={() => navigate("/Discover")}
             />
             <NavItem
               icon={<Users size={18} />}
               label="Ghost Circles"
               active={currentTab === "Circles"}
-              onClick={() => handleTabClick("Circles")}
+              onClick={() => navigate("/Circles")}
             />
             <NavItem
               icon={<MessageSquare size={18} />}
               label="Whispers"
               active={currentTab === "Whispers"}
-              onClick={() => handleTabClick("Whispers")}
+              onClick={() => navigate("/Whispers")}
             />
             <NavItem
               icon={<Bell size={18} />}
               label="Notifications"
               active={currentTab === "Notifications"}
-              onClick={() => handleTabClick("Notifications")}
+              onClick={() => navigate("/Notifications")}
             />
             <NavItem
               icon={<UserRound size={18} />}
               label="Profile"
               active={currentTab === "Profile"}
-              onClick={() => handleTabClick("Profile")}
+              onClick={() => navigate("/Profile")}
             />
           </div>
 
@@ -151,54 +150,58 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
 
           <div className="p-4 grow">
-            <div className="bg-undercover-dark rounded-lg p-3 mb-6 border border-undercover-purple/20">
-              <AvatarGenerator
-                emoji={userIdentity.emoji}
-                nickname={userIdentity.nickname}
-                color={userIdentity.color}
-                size="md"
-              />
-              <p className="mt-2 text-xs text-muted-foreground">
-                Your anonymous identity
-              </p>
+          <div className="flex items-center gap-3 bg-undercover-dark rounded-lg p-3 mb-6 border border-undercover-purple/20">
+            <AvatarGenerator
+              emoji={userIdentity.emoji}
+              nickname={user.anonymousAlias}
+              color={userIdentity.color}
+              size="md"
+            />
+            <div>
+
+            <h2 className="text-lg font-bold">{user.anonymousAlias}</h2>
+            <p className="text-xs text-muted-foreground">
+              Your anonymous identity
+            </p>
             </div>
+          </div>
 
             <div className="space-y-2">
               <NavItem
                 icon={<Home size={18} />}
                 label="Home"
                 active={currentTab === "Home"}
-                onClick={() => handleTabClick("Home")}
+                onClick={() => navigate("/")}
               />
               <NavItem
                 icon={<Search size={18} />}
                 label="Discover"
                 active={currentTab === "Discover"}
-                onClick={() => handleTabClick("Discover")}
+                onClick={() => navigate("/Discover")}
               />
               <NavItem
                 icon={<Users size={18} />}
                 label="Ghost Circles"
                 active={currentTab === "Circles"}
-                onClick={() => handleTabClick("Circles")}
+                onClick={() => navigate("/Circles")}
               />
               <NavItem
                 icon={<MessageSquare size={18} />}
                 label="Whispers"
                 active={currentTab === "Whispers"}
-                onClick={() => handleTabClick("Whispers")}
+                onClick={() => navigate("/Whispers")}
               />
               <NavItem
                 icon={<Bell size={18} />}
                 label="Notifications"
                 active={currentTab === "Notifications"}
-                onClick={() => handleTabClick("Notifications")}
+                onClick={() => navigate("/Notifications")}
               />
               <NavItem
                 icon={<UserRound size={18} />}
                 label="Profile"
                 active={currentTab === "Profile"}
-                onClick={() => handleTabClick("Profile")}
+                onClick={() => navigate("/Profile")}
               />
             </div>
 
@@ -238,24 +241,30 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
         </div>
 
-        <div className="flex-1 pb-16 md:pb-0">
-          {children}
-        </div>
+        <div className="flex-1 pb-16 md:pb-0">{children}</div>
 
         <div className="md:hidden fixed bottom-0 w-full bg-card border-t border-border p-2 flex justify-around">
           <Button
             variant="ghost"
             size="icon"
-            className={currentTab === "Home" ? "text-undercover-light-purple" : "text-muted-foreground"}
-            onClick={() => handleTabClick("Home")}
+            className={
+              currentTab === "Home"
+                ? "text-undercover-light-purple"
+                : "text-muted-foreground"
+            }
+            onClick={() => navigate("/")}
           >
             <Home size={20} />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className={currentTab === "Discover" ? "text-undercover-light-purple" : "text-muted-foreground"}
-            onClick={() => handleTabClick("Discover")}
+            className={
+              currentTab === "Discover"
+                ? "text-undercover-light-purple"
+                : "text-muted-foreground"
+            }
+            onClick={() => navigate("/Discover")}
           >
             <Search size={20} />
           </Button>
@@ -270,28 +279,36 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <Button
             variant="ghost"
             size="icon"
-            className={currentTab === "Whispers" ? "text-undercover-light-purple" : "text-muted-foreground"}
-            onClick={() => handleTabClick("Whispers")}
+            className={
+              currentTab === "Whispers"
+                ? "text-undercover-light-purple"
+                : "text-muted-foreground"
+            }
+            onClick={() => navigate("/Whispers")}
           >
             <MessageSquare size={20} />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className={currentTab === "Profile" ? "text-undercover-light-purple" : "text-muted-foreground"}
-            onClick={() => handleTabClick("Profile")}
+            className={
+              currentTab === "Profile"
+                ? "text-undercover-light-purple"
+                : "text-muted-foreground"
+            }
+            onClick={() => navigate("/Profile")}
           >
             <UserRound size={20} />
           </Button>
         </div>
       </div>
 
-      <WhisperModal open={whisperModalOpen} onOpenChange={setWhisperModalOpen} />
+      <WhisperModal
+        open={whisperModalOpen}
+        onOpenChange={setWhisperModalOpen}
+      />
     </div>
   );
 };
 
 export default AppShell;
-
-
-

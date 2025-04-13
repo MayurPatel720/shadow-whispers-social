@@ -30,6 +30,10 @@ const userSchema = mongoose.Schema(
       required: [true, 'Please add a password'],
       minlength: 6,
     },
+    bio: {
+      type: String,
+      default: '',
+    },
     anonymousAlias: {
       type: String,
       default: '',
