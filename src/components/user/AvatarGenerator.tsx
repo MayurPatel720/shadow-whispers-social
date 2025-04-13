@@ -1,34 +1,37 @@
 
-import React from "react";
+import React from 'react';
+import { cn } from "@/lib/utils";
 
-type AvatarGeneratorProps = {
+interface AvatarGeneratorProps {
   emoji: string;
   nickname: string;
-  color: string;
-  size?: "sm" | "md" | "lg";
-};
+  color?: string;
+  size?: "sm" | "md" | "lg" | "xs";
+}
 
 const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({ 
   emoji, 
-  nickname,
-  color,
+  nickname, 
+  color = "#9333EA", 
   size = "md" 
 }) => {
   const sizeClasses = {
-    sm: "w-8 h-8 text-lg",
-    md: "w-10 h-10 text-xl",
-    lg: "w-12 h-12 text-2xl"
+    "xs": "h-6 w-6 text-xs",
+    "sm": "h-8 w-8 text-sm",
+    "md": "h-10 w-10 text-base",
+    "lg": "h-12 w-12 text-lg"
   };
-  
+
   return (
-    <div className="flex items-center space-x-2">
-      <div 
-        className={`${sizeClasses[size]} flex items-center justify-center rounded-full animate-pulse-glow`}
-        style={{ backgroundColor: color }}
-      >
-        <span>{emoji}</span>
-      </div>
-      <span className="font-medium text-sm text-white">{nickname}</span>
+    <div 
+      className={cn(
+        "flex items-center justify-center rounded-full text-white font-bold",
+        sizeClasses[size]
+      )}
+      style={{ backgroundColor: color }}
+      title={nickname}
+    >
+      {emoji}
     </div>
   );
 };
