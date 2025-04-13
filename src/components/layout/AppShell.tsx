@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Home,
   Search,
@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import WhisperModal from "../whisper/WhisperModal";
 import { useAuth } from "@/context/AuthContext";
 import AvatarGenerator from "../user/AvatarGenerator";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const NavItem: React.FC<{
   icon: React.ReactNode;
@@ -39,13 +41,37 @@ const NavItem: React.FC<{
 
 const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currentTab, setCurrentTab] = useState("Home");
   const [whisperModalOpen, setWhisperModalOpen] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isMobile = useIsMobile();
   
+  const [currentTab, setCurrentTab] = useState(() => {
+    const path = location.pathname;
+    if (path === "/") return "Home";
+    if (path === "/whispers") return "Whispers";
+    if (path === "/profile") return "Profile";
+    return "Home";
+  });
+  
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === "/") setCurrentTab("Home");
+    else if (path === "/whispers") setCurrentTab("Whispers");
+    else if (path === "/profile") setCurrentTab("Profile");
+  }, [location.pathname]);
+
   const handleTabClick = (tab: string) => {
     setCurrentTab(tab);
     setMobileMenuOpen(false);
+    
+    if (tab === "Home") navigate("/");
+    else if (tab === "Whispers") navigate("/whispers");
+    else if (tab === "Profile") navigate("/profile");
+    else if (tab === "Discover") navigate("/discover");
+    else if (tab === "Circles") navigate("/circles");
+    else if (tab === "Notifications") navigate("/notifications");
   };
 
   const openWhisperModal = () => {
@@ -241,48 +267,50 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           {children}
         </div>
 
-        <div className="md:hidden fixed bottom-0 w-full bg-card border-t border-border p-2 flex justify-around">
-          <Button
-            variant="ghost"
-            size="icon"
-            className={currentTab === "Home" ? "text-undercover-light-purple" : "text-muted-foreground"}
-            onClick={() => handleTabClick("Home")}
-          >
-            <Home size={20} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={currentTab === "Discover" ? "text-undercover-light-purple" : "text-muted-foreground"}
-            onClick={() => handleTabClick("Discover")}
-          >
-            <Search size={20} />
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="rounded-full bg-undercover-purple text-white"
-            onClick={openWhisperModal}
-          >
-            <PlusCircle size={20} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={currentTab === "Whispers" ? "text-undercover-light-purple" : "text-muted-foreground"}
-            onClick={() => handleTabClick("Whispers")}
-          >
-            <MessageSquare size={20} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={currentTab === "Profile" ? "text-undercover-light-purple" : "text-muted-foreground"}
-            onClick={() => handleTabClick("Profile")}
-          >
-            <UserRound size={20} />
-          </Button>
-        </div>
+        {isMobile && (
+          <div className="md:hidden fixed bottom-0 w-full bg-card border-t border-border p-2 flex justify-around">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={currentTab === "Home" ? "text-undercover-light-purple" : "text-muted-foreground"}
+              onClick={() => handleTabClick("Home")}
+            >
+              <Home size={20} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={currentTab === "Discover" ? "text-undercover-light-purple" : "text-muted-foreground"}
+              onClick={() => handleTabClick("Discover")}
+            >
+              <Search size={20} />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="rounded-full bg-undercover-purple text-white"
+              onClick={openWhisperModal}
+            >
+              <PlusCircle size={20} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={currentTab === "Whispers" ? "text-undercover-light-purple" : "text-muted-foreground"}
+              onClick={() => handleTabClick("Whispers")}
+            >
+              <MessageSquare size={20} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={currentTab === "Profile" ? "text-undercover-light-purple" : "text-muted-foreground"}
+              onClick={() => handleTabClick("Profile")}
+            >
+              <UserRound size={20} />
+            </Button>
+          </div>
+        )}
       </div>
 
       <WhisperModal open={whisperModalOpen} onOpenChange={setWhisperModalOpen} />

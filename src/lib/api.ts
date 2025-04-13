@@ -63,6 +63,11 @@ export const getUserProfile = async () => {
   return response.data;
 };
 
+export const updateUserProfile = async (userData: any) => {
+  const response = await api.put('/api/users/profile', userData);
+  return response.data;
+};
+
 export const addFriend = async (friendUsername: string) => {
   const response = await api.post('/api/users/friends', { friendUsername });
   return response.data;
@@ -85,8 +90,31 @@ export const inviteToGhostCircle = async (circleId: string, username: string) =>
 };
 
 // Posts API calls
-export const createPost = async (content: string, ghostCircleId?: string) => {
-  const response = await api.post('/api/posts', { content, ghostCircleId });
+export const createPost = async (content: string, ghostCircleId?: string, imageUrl?: string) => {
+  const postData = { content, ghostCircleId };
+  if (imageUrl) {
+    postData.imageUrl = imageUrl;
+  }
+  const response = await api.post('/api/posts', postData);
+  return response.data;
+};
+
+export const updatePost = async (postId: string, content: string, imageUrl?: string) => {
+  const postData = { content };
+  if (imageUrl) {
+    postData.imageUrl = imageUrl;
+  }
+  const response = await api.put(`/api/posts/${postId}`, postData);
+  return response.data;
+};
+
+export const deletePost = async (postId: string) => {
+  const response = await api.delete(`/api/posts/${postId}`);
+  return response.data;
+};
+
+export const getUserPosts = async (userId: string) => {
+  const response = await api.get(`/api/posts/user/${userId}`);
   return response.data;
 };
 
@@ -97,6 +125,17 @@ export const getGlobalFeed = async () => {
 
 export const likePost = async (postId: string) => {
   const response = await api.put(`/api/posts/${postId}/like`);
+  return response.data;
+};
+
+// Comments API calls
+export const addComment = async (postId: string, content: string) => {
+  const response = await api.post(`/api/posts/${postId}/comments`, { content });
+  return response.data;
+};
+
+export const getComments = async (postId: string) => {
+  const response = await api.get(`/api/posts/${postId}/comments`);
   return response.data;
 };
 
