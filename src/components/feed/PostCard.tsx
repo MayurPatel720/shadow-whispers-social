@@ -15,35 +15,60 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import AvatarGenerator from "../user/AvatarGenerator";
+import { useAuth } from "@/context/AuthContext";
+import { likePost } from "@/lib/api";
+import { formatDistanceToNow } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 interface PostCardProps {
-  post: {
-    id: string;
-    content: string;
-    time: string;
-    likes: number;
-    comments: number;
-    identity: {
-      emoji: string;
-      nickname: string;
-      color: string;
-    };
-    clueCount: number;
-  };
-  currentUserId?: string; // Add this line to include currentUserId in props
+  post: any; // Will refine the type when we have the full PostModel
+  currentUserId?: string;
+  onRefresh?: () => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, currentUserId }) => {
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(post.likes);
+const PostCard: React.FC<PostCardProps> = ({ post, currentUserId, onRefresh }) => {
+  const { user } = useAuth();
+  const [likeCount, setLikeCount] = useState(post.likes?.length || 0);
+  const [isLiked, setIsLiked] = useState(
+    post.likes?.some(like => like.user === currentUserId)
+  );
+  const [isLiking, setIsLiking] = useState(false);
 
-  const handleLike = () => {
-    if (liked) {
-      setLikeCount(likeCount - 1);
-    } else {
-      setLikeCount(likeCount + 1);
+  const handleLike = async () => {
+    if (isLiking) return;
+    
+    try {
+      setIsLiking(true);
+      const response = await likePost(post._id);
+      
+      setLikeCount(response.likes);
+      setIsLiked(!isLiked);
+      
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not like this post. Please try again."
+      });
+      console.error("Like error:", error);
+    } finally {
+      setIsLiking(false);
     }
-    setLiked(!liked);
+  };
+
+  // Format the post time
+  const postTime = post.createdAt 
+    ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })
+    : "Unknown time";
+
+  // Create a simple identity object from post data
+  const identity = {
+    emoji: post.avatarEmoji || "🎭",
+    nickname: post.anonymousAlias || "Anonymous",
+    color: "#9333EA", // Default purple color
   };
 
   return (
@@ -51,28 +76,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId }) => {
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start">
           <AvatarGenerator 
-            emoji={post.identity.emoji} 
-            nickname={post.identity.nickname} 
-            color={post.identity.color}
+            emoji={identity.emoji} 
+            nickname={identity.nickname} 
+            color={identity.color}
           />
           
           <div className="flex items-center">
-            <span className="text-xs text-muted-foreground">{post.time}</span>
-            {post.clueCount > 0 && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-undercover-purple ml-1">
-                      <Sparkles size={14} />
-                      <span className="text-xs">{post.clueCount}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs">You have {post.clueCount} clues about this user</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+            <span className="text-xs text-muted-foreground">{postTime}</span>
           </div>
         </div>
       </CardHeader>
@@ -86,10 +96,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId }) => {
             size="sm" 
             className="flex items-center space-x-1 text-xs"
             onClick={handleLike}
+            disabled={isLiking}
           >
             <Heart 
               size={16} 
-              className={liked ? "fill-red-500 text-red-500" : ""}
+              className={isLiked ? "fill-red-500 text-red-500" : ""}
             />
             <span>{likeCount}</span>
           </Button>
@@ -99,7 +110,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId }) => {
             className="flex items-center space-x-1 text-xs"
           >
             <MessageCircle size={16} />
-            <span>{post.comments}</span>
+            <span>{post.comments?.length || 0}</span>
           </Button>
         </div>
         <TooltipProvider>
