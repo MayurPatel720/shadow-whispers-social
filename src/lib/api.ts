@@ -115,7 +115,7 @@ export const updatePost = async (postId: string, content: string, imageUrl?: str
     imageUrl?: string;
   } = { content };
   
-  if (imageUrl) {
+  if (imageUrl !== undefined) {
     postData.imageUrl = imageUrl;
   }
   

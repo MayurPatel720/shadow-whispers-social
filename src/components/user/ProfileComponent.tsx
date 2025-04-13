@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserRound, Settings, LogOut, Image, Grid, Edit, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getUserProfile } from "@/lib/api";
 import PostCard from "../feed/PostCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,13 +15,18 @@ import EditProfileModal from "./EditProfileModal";
 const ProfileComponent = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   
-  const { data: profileData, isLoading } = useQuery({
+  const { data: profileData, isLoading, refetch } = useQuery({
     queryKey: ['userProfile'],
     queryFn: getUserProfile,
     enabled: !!user
   });
+
+  const handleRefreshPosts = () => {
+    refetch();
+  };
 
   if (!user) return null;
 
@@ -88,8 +93,7 @@ const ProfileComponent = () => {
           <div className="space-y-2">
             <h3 className="font-medium text-sm">Your Anonymous Identity</h3>
             <p className="text-sm text-muted-foreground">
-              In Undercover, you're known as <span className="text-undercover-light-purple">{user.anonymousAlias}</span>. 
-              This identity stays consistent throughout your experience.
+              {user.bio || `In Undercover, you're known as ${user.anonymousAlias}. This identity stays consistent throughout your experience.`}
             </p>
           </div>
         </CardContent>
@@ -122,7 +126,7 @@ const ProfileComponent = () => {
                   key={post._id} 
                   post={post} 
                   currentUserId={user._id} 
-                  onRefresh={() => {}} 
+                  onRefresh={handleRefreshPosts} 
                   showOptions={true}
                 />
               ))}

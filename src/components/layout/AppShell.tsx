@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Home,
@@ -89,6 +90,7 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-background flex">
+      {/* Desktop Sidebar */}
       <div className="hidden md:flex flex-col w-64 border-r border-border bg-card h-screen sticky top-0">
         <div className="p-4 border-b border-border">
           <h1 className="text-xl font-bold text-undercover-light-purple flex items-center">
@@ -159,6 +161,7 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </div>
 
+      {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 bg-background/95 z-50 flex md:hidden flex-col animate-fade-in">
           <div className="p-4 flex justify-between items-center border-b border-border">
