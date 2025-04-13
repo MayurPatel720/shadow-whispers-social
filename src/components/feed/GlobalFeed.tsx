@@ -16,13 +16,15 @@ const GlobalFeed = () => {
   const { data: posts, isLoading, error, refetch } = useQuery({
     queryKey: ['globalFeed'],
     queryFn: getGlobalFeed,
-    onError: (error) => {
-      console.error("Error fetching posts:", error);
-      toast({
-        variant: "destructive",
-        title: "Error loading posts",
-        description: "Could not load the latest posts. Please try again later."
-      });
+    onSettled: (data, error) => {
+      if (error) {
+        console.error("Error fetching posts:", error);
+        toast({
+          variant: "destructive",
+          title: "Error loading posts",
+          description: "Could not load the latest posts. Please try again later."
+        });
+      }
     }
   });
 
