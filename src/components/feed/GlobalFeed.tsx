@@ -16,8 +16,8 @@ const GlobalFeed = () => {
   const { data: posts, isLoading, error, refetch } = useQuery({
     queryKey: ['globalFeed'],
     queryFn: getGlobalFeed,
-    onSettled: (data, error) => {
-      if (error) {
+    meta: {
+      onError: (error: Error) => {
         console.error("Error fetching posts:", error);
         toast({
           variant: "destructive",
