@@ -23,22 +23,11 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ open, onOpenChange 
     setIsSubmitting(true);
     
     try {
-      // This is a placeholder for actual implementation
-      // In a real app, we would call an API to update the profile
-      setTimeout(() => {
-        toast({
-          title: "Profile updated",
-          description: "Your profile has been updated successfully",
-        });
-        onOpenChange(false);
-        setIsSubmitting(false);
-      }, 1000);
+      await updateProfile({ bio });
+      onOpenChange(false);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to update profile",
-      });
+      console.error("Failed to update profile:", error);
+    } finally {
       setIsSubmitting(false);
     }
   };

@@ -91,19 +91,34 @@ export const inviteToGhostCircle = async (circleId: string, username: string) =>
 
 // Posts API calls
 export const createPost = async (content: string, ghostCircleId?: string, imageUrl?: string) => {
-  const postData = { content, ghostCircleId };
+  const postData: { 
+    content: string; 
+    ghostCircleId?: string;
+    imageUrl?: string;
+  } = { content };
+  
+  if (ghostCircleId) {
+    postData.ghostCircleId = ghostCircleId;
+  }
+  
   if (imageUrl) {
     postData.imageUrl = imageUrl;
   }
+  
   const response = await api.post('/api/posts', postData);
   return response.data;
 };
 
 export const updatePost = async (postId: string, content: string, imageUrl?: string) => {
-  const postData = { content };
+  const postData: {
+    content: string;
+    imageUrl?: string;
+  } = { content };
+  
   if (imageUrl) {
     postData.imageUrl = imageUrl;
   }
+  
   const response = await api.put(`/api/posts/${postId}`, postData);
   return response.data;
 };

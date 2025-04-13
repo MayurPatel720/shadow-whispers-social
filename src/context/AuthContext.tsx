@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loginUser, registerUser, getUserProfile } from '@/lib/api';
+import { loginUser, registerUser, getUserProfile, updateUserProfile } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 
 interface User {
@@ -11,6 +10,7 @@ interface User {
   email: string;
   anonymousAlias: string;
   avatarEmoji: string;
+  bio?: string;
 }
 
 interface AuthContextType {
@@ -20,6 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (username: string, fullName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (userData: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -29,7 +30,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Check if user is already logged in
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
@@ -88,16 +88,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error: any) {
       console.error('Registration failed', error);
       
-      // More detailed error handling
       let errorMessage = "Registration failed";
       if (error.response) {
-        // The request was made and the server responded with a status code
         errorMessage = error.response.data?.message || "Server error: " + error.response.status;
       } else if (error.request) {
-        // The request was made but no response was received
         errorMessage = "No response from server. Please check your connection.";
       } else {
-        // Something happened in setting up the request
         errorMessage = error.message || "Unknown error occurred";
       }
       
@@ -106,6 +102,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         title: "Registration failed",
         description: errorMessage,
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateProfile = async (userData: Partial<User>) => {
+    try {
+      setIsLoading(true);
+      const updatedUser = await updateUserProfile(userData);
+      setUser(prev => prev ? { ...prev, ...updatedUser } : null);
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully",
+      });
+      return updatedUser;
+    } catch (error: any) {
+      console.error('Update profile failed', error);
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: error.response?.data?.message || "Failed to update profile",
+      });
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -130,6 +149,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         register,
         logout,
+        updateProfile,
       }}
     >
       {children}
