@@ -1,56 +1,75 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserRound, Settings, LogOut, Image, Grid, Edit, MessageSquare } from "lucide-react";
+import { UserRound, Settings, LogOut, Image, Grid, Edit, MessageSquare, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getUserProfile, getUserPosts } from "@/lib/api";
-import PostCard from "../feed/PostCard";
+import { useQuery } from "@tanstack/react-query";
+import { getUserProfile, getUserPosts, deletePost } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import EditProfileModal from "./EditProfileModal";
 import { toast } from "@/hooks/use-toast";
 
 const ProfileComponent = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-  
+  const [showConfirmDeleteDialog, setshowConfirmDeleteDialog] = useState(false);
+
+
   const { data: profileData, isLoading: profileLoading } = useQuery({
     queryKey: ['userProfile'],
     queryFn: getUserProfile,
     enabled: !!user,
     meta: {
-      onError: (error) => {
+      onError: () => {
         toast({
           variant: "destructive",
           title: "Failed to load profile",
-          description: "Could not retrieve your profile information."
+          description: "Could not retrieve your profile information.",
         });
-      }
-    }
+      },
+    },
   });
-  
-  const { data: userPosts, isLoading: postsLoading, refetch } = useQuery({
+
+  const {
+    data: userPosts,
+    isLoading: postsLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['userPosts', user?._id],
     queryFn: () => getUserPosts(user?._id),
     enabled: !!user?._id,
     meta: {
-      onError: (error) => {
+      onError: () => {
         toast({
           variant: "destructive",
           title: "Failed to load posts",
-          description: "Could not retrieve your posts."
+          description: "Could not retrieve your posts.",
         });
-      }
-    }
+      },
+    },
   });
 
-  const handleRefreshPosts = () => {
-    refetch();
+  const handleDeletePost = async (postId: string) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this post?");
+    if (!confirmDelete) return;
+
+    try {
+      await deletePost(postId);
+      toast({
+        title: "Post deleted",
+        description: "Your post has been successfully deleted.",
+      });
+      refetch();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Failed to delete post",
+        description: "Please try again later.",
+      });
+    }
   };
 
   const isLoading = profileLoading || postsLoading;
@@ -60,7 +79,7 @@ const ProfileComponent = () => {
   const userStats = {
     posts: userPosts?.length || 0,
     followers: profileData?.identityRecognizers?.length || 0,
-    following: profileData?.recognizedUsers?.length || 0
+    following: profileData?.recognizedUsers?.length || 0,
   };
 
   return (
@@ -77,7 +96,7 @@ const ProfileComponent = () => {
                 {user.anonymousAlias}
               </CardTitle>
               <p className="text-sm text-muted-foreground">@{user.username}</p>
-              
+
               <div className="flex mt-4 space-x-6">
                 <div className="text-center">
                   <p className="font-bold">{userStats.posts}</p>
@@ -92,10 +111,10 @@ const ProfileComponent = () => {
                   <p className="text-xs text-muted-foreground">Recognized</p>
                 </div>
               </div>
-              
+
               <div className="flex gap-2 mt-4">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="text-sm flex-1 md:flex-none"
                   onClick={() => setEditProfileOpen(true)}
                 >
@@ -116,17 +135,18 @@ const ProfileComponent = () => {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="border-t border-border my-2"></div>
-          
+
           <div className="space-y-2">
             <h3 className="font-medium text-sm">Your Anonymous Identity</h3>
             <p className="text-sm text-muted-foreground">
-              {user.bio || `In Undercover, you're known as ${user.anonymousAlias}. This identity stays consistent throughout your experience.`}
+              {user.bio ||
+                `In Undercover, you're known as ${user.anonymousAlias}. This identity stays consistent throughout your experience.`}
             </p>
           </div>
         </CardContent>
       </Card>
-      
-      {/* Profile Tabs and Content */}
+
+      {/* Tabs */}
       <Tabs defaultValue="posts" className="w-full">
         <TabsList className="w-full grid grid-cols-2 mb-6">
           <TabsTrigger value="posts">
@@ -138,7 +158,8 @@ const ProfileComponent = () => {
             Settings
           </TabsTrigger>
         </TabsList>
-        
+
+        {/* Posts Grid */}
         <TabsContent value="posts">
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -147,15 +168,33 @@ const ProfileComponent = () => {
               ))}
             </div>
           ) : userPosts && userPosts.length > 0 ? (
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {userPosts.map((post) => (
-                <PostCard 
-                  key={post._id} 
-                  post={post} 
-                  currentUserId={user._id} 
-                  onRefresh={handleRefreshPosts} 
-                  showOptions={true}
-                />
+                <div key={post._id} className="relative border rounded-lg overflow-hidden shadow-sm">
+                  <img
+                    src={post.imageUrl}
+                    alt="Post"
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="bg-white/70 hover:bg-white"
+                      onClick={() => navigate(`/edit-post/${post._id}`)}
+                    >
+                      <Edit className="text-black"  size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="bg-white/70 hover:bg-white"
+                      onClick={() => handleDeletePost(post._id)}
+                    >
+                      <Trash2 className="text-black" size={16} />
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
@@ -163,7 +202,7 @@ const ProfileComponent = () => {
               <Image className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No Posts Yet</h3>
               <p className="text-muted-foreground mb-4">Share your thoughts anonymously!</p>
-              <Button 
+              <Button
                 onClick={() => navigate("/")}
                 className="bg-undercover-purple hover:bg-undercover-deep-purple"
               >
@@ -172,7 +211,8 @@ const ProfileComponent = () => {
             </div>
           )}
         </TabsContent>
-        
+
+        {/* Settings */}
         <TabsContent value="settings">
           <Card>
             <CardContent className="space-y-4 pt-6">
@@ -180,23 +220,22 @@ const ProfileComponent = () => {
                 <h4 className="text-sm font-medium">Account Settings</h4>
                 <p className="text-xs text-muted-foreground">Manage your account settings and preferences.</p>
               </div>
-              
+
               <div className="border-t border-border my-4"></div>
-              
+
               <div className="grid grid-cols-1 gap-4">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => navigate("/profile/settings")}
                   className="justify-start"
                 >
                   <Settings size={16} className="mr-2" />
                   Account Settings
                 </Button>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={() => {
                     if (window.confirm("Are you sure you want to log out?")) {
-                      const { logout } = useAuth();
                       logout();
                     }
                   }}
@@ -210,11 +249,8 @@ const ProfileComponent = () => {
           </Card>
         </TabsContent>
       </Tabs>
-      
-      <EditProfileModal 
-        open={editProfileOpen} 
-        onOpenChange={setEditProfileOpen}
-      />
+
+      <EditProfileModal open={editProfileOpen} onOpenChange={setEditProfileOpen} />
     </div>
   );
 };

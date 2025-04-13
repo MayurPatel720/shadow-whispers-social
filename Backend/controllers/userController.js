@@ -1,10 +1,32 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
 const { generateToken } = require('../utils/jwtHelper');
+const postModel = require('../models/postModel');
 
 // @desc    Register a new user
 // @route   POST /api/users/register
 // @access  Public
+const getOwnPosts = asyncHandler(async (req, res) => {
+  const userId = req.params.userId;
+
+  const posts = await postModel.find({ user: userId })
+    .sort({ createdAt: -1 }) // Sort posts by most recent first
+    .populate('likes.user', 'username') // Populate likes with user information (optional)
+    .populate('comments.user', 'username') // Populate comments with user information (optional)
+    .exec();
+
+  // Check if the user has any posts
+  if (!posts || posts.length === 0) {
+    res.status(404);
+    throw new Error('No posts found for this user');
+  }
+
+  // Send the posts as the response
+  res.status(200).json(posts);
+});
+
+
+
 const registerUser = asyncHandler(async (req, res) => {
   const { username, fullName, email, password } = req.body;
 
@@ -170,4 +192,5 @@ module.exports = {
   getUserProfile,
   updateUserProfile,
   addFriend,
+  getOwnPosts
 };

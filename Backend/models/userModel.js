@@ -34,6 +34,12 @@ const userSchema = mongoose.Schema(
       type: String,
       default: '',
     },
+    posts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Post', 
+      },
+    ],
     anonymousAlias: {
       type: String,
       default: '',

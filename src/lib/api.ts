@@ -126,12 +126,12 @@ export const updatePost = async (postId: string, content: string, imageUrl?: str
 };
 
 export const deletePost = async (postId: string) => {
-  const response = await api.delete(`/api/posts/${postId}`);
+  const response = await api.delete(`/api/posts/delete/${postId}`);
   return response.data;
 };
 
 export const getUserPosts = async (userId: string) => {
-  const response = await api.get(`/api/posts/user/${userId}`);
+  const response = await api.get(`/api/users/userposts/${userId}`);
   return response.data;
 };
 

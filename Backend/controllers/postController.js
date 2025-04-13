@@ -10,6 +10,7 @@ const GhostCircle = require('../models/ghostCircleModel');
 const createPost = asyncHandler(async (req, res) => {
   const { content, ghostCircleId, imageUrl, expiresIn } = req.body;
 
+  // Check if content or image is provided
   if (!content && !imageUrl) {
     res.status(400);
     throw new Error('Please add content or image to your post');
@@ -19,6 +20,7 @@ const createPost = asyncHandler(async (req, res) => {
   const expiryTime = new Date();
   expiryTime.setHours(expiryTime.getHours() + (expiresIn || 24));
 
+  // Prepare the post data
   const postData = {
     user: req.user._id,
     content: content || '',
@@ -28,28 +30,36 @@ const createPost = asyncHandler(async (req, res) => {
     expiresAt: expiryTime,
   };
 
+  // Check if the post is for a specific ghost circle
   if (ghostCircleId) {
     // Check if ghost circle exists and user is a member
     const ghostCircle = await GhostCircle.findById(ghostCircleId);
-    
+
     if (!ghostCircle) {
       res.status(404);
       throw new Error('Ghost circle not found');
     }
-    
+
     const isMember = ghostCircle.members.some(member => 
       member.userId.toString() === req.user._id.toString()
     );
-    
+
     if (!isMember) {
       res.status(403);
       throw new Error('Not authorized to post in this ghost circle');
     }
-    
+
+    // Add ghost circle reference to post data
     postData.ghostCircle = ghostCircleId;
   }
 
+  // Create the post
   const post = await Post.create(postData);
+
+  // Add post ID to the user's posts array
+  const user = await User.findById(req.user._id);
+  user.posts.push(post._id); // Add the new post ID to the user's posts array
+  await user.save();
 
   // If posting to a ghost circle, add post to the circle's posts
   if (ghostCircleId) {
@@ -59,8 +69,41 @@ const createPost = asyncHandler(async (req, res) => {
     );
   }
 
+  // Return the newly created post
   res.status(201).json(post);
+});const deletepost = asyncHandler(async (req, res) => {
+  try {
+    const  postId  = req.params.postId;
+
+    // Find the post to be deleted
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Verify the current user is the owner of the post
+    if (post.user.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to delete this post' });
+    }
+
+    // Remove the post from the database using findByIdAndDelete
+    await Post.findByIdAndDelete(postId);
+
+    // Remove the post reference from the user's posts array
+    await User.findByIdAndUpdate(
+      req.user.id, 
+      { $pull: { posts: postId } }, 
+      { new: true }
+    );
+
+    res.status(200).json({ message: 'Post and user reference deleted successfully' });
+  } catch (error) {
+    console.error('Delete post error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
+
+
 
 // @desc    Get global feed posts (not in ghost circles)
 // @route   GET /api/posts/global
@@ -79,7 +122,6 @@ const getGlobalFeed = asyncHandler(async (req, res) => {
 // controllers/postController.js
 const addComment = asyncHandler(async (req, res) => {
   const { content, anonymousAlias } = req.body;
-  console.log(req.body);
   
   // Validate input fields
   if (!content || !anonymousAlias) {
@@ -286,5 +328,6 @@ module.exports = {
   likePost,
   recognizeUser,
   getComments,
-  addComment
+  addComment,
+  deletepost
 };

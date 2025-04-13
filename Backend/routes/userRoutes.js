@@ -7,6 +7,7 @@ const {
   getUserProfile,
   updateUserProfile,
   addFriend,
+  getOwnPosts
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -15,6 +16,8 @@ router.post('/register', registerUser);
 router.post('/login', loginUser);
 
 // Private routes
+router.get('/userposts/:userId', protect, getOwnPosts);
+
 router.get('/profile', protect, getUserProfile);
 router.put('/profile', protect, updateUserProfile);
 router.post('/friends', protect, addFriend);
