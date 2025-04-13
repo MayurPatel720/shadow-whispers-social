@@ -10,6 +10,8 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
+import WhispersPage from "./pages/WhispersPage";
+import ProfileComponent from "./components/user/ProfileComponent";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +30,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Index />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/whispers"
+              element={
+                <ProtectedRoute>
+                  <WhispersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfileComponent />
                 </ProtectedRoute>
               }
             />

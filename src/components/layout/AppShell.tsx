@@ -1,6 +1,4 @@
-
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Home,
   Search,
@@ -14,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import WhisperModal from "../whisper/WhisperModal";
-import { generateIdentity } from "@/lib/utils/generators";
+import { useAuth } from "@/context/AuthContext";
 import AvatarGenerator from "../user/AvatarGenerator";
 
 const NavItem: React.FC<{
@@ -40,14 +38,11 @@ const NavItem: React.FC<{
 };
 
 const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState("Home");
   const [whisperModalOpen, setWhisperModalOpen] = useState(false);
+  const { user } = useAuth();
   
-  // Generate a random identity for the current user
-  const userIdentity = React.useMemo(() => generateIdentity(), []);
-
   const handleTabClick = (tab: string) => {
     setCurrentTab(tab);
     setMobileMenuOpen(false);
@@ -58,9 +53,16 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     setMobileMenuOpen(false);
   };
 
+  const userIdentity = React.useMemo(() => {
+    return {
+      emoji: user?.avatarEmoji || '🎭',
+      nickname: user?.anonymousAlias || 'Anonymous',
+      color: '#6E59A5', // Default purple color
+    };
+  }, [user]);
+
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Desktop Sidebar */}
       <div className="hidden md:flex flex-col w-64 border-r border-border bg-card h-screen sticky top-0">
         <div className="p-4 border-b border-border">
           <h1 className="text-xl font-bold text-undercover-light-purple flex items-center">
@@ -131,7 +133,6 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </div>
 
-      {/* Mobile menu overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 bg-background/95 z-50 flex md:hidden flex-col animate-fade-in">
           <div className="p-4 flex justify-between items-center border-b border-border">
@@ -211,9 +212,7 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       )}
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Mobile Header */}
         <div className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border p-4 flex justify-between items-center">
           <h1 className="text-lg font-bold text-undercover-light-purple flex items-center">
             <span className="text-xl mr-2">🕶️</span>
@@ -238,13 +237,11 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1">
+        <div className="flex-1 pb-16 md:pb-0">
           {children}
         </div>
 
-        {/* Mobile Bottom Nav */}
-        <div className="md:hidden sticky bottom-0 bg-card border-t border-border p-2 flex justify-around">
+        <div className="md:hidden fixed bottom-0 w-full bg-card border-t border-border p-2 flex justify-around">
           <Button
             variant="ghost"
             size="icon"
@@ -272,10 +269,10 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <Button
             variant="ghost"
             size="icon"
-            className={currentTab === "Circles" ? "text-undercover-light-purple" : "text-muted-foreground"}
-            onClick={() => handleTabClick("Circles")}
+            className={currentTab === "Whispers" ? "text-undercover-light-purple" : "text-muted-foreground"}
+            onClick={() => handleTabClick("Whispers")}
           >
-            <Users size={20} />
+            <MessageSquare size={20} />
           </Button>
           <Button
             variant="ghost"
@@ -288,7 +285,6 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </div>
 
-      {/* Whisper Modal */}
       <WhisperModal open={whisperModalOpen} onOpenChange={setWhisperModalOpen} />
     </div>
   );
