@@ -3,15 +3,13 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Ghost, UserPlus, Share2, ExternalLink } from "lucide-react";
+import { Ghost, UserPlus, Share2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTabs,
-  DialogTab,
 } from "@/components/ui/dialog";
 import {
   Form,
