@@ -77,11 +77,14 @@ export const addFriend = async (friendUsername: string) => {
 // User search API call
 export const searchUsers = async (query: string) => {
   try {
-    const response = await api.get(`/api/ghost-circles/users/search?q=${encodeURIComponent(query)}`);
+    if (!query || query.trim() === '') {
+      return [];
+    }
+    const response = await api.get(`/api/users/search?q=${encodeURIComponent(query)}`);
     return response.data;
   } catch (error) {
     console.error('Error searching users:', error);
-    return [];
+    throw error;
   }
 };
 
@@ -194,23 +197,55 @@ export const getComments = async (postId: string) => {
 
 // Whispers API calls
 export const sendWhisper = async (receiverId: string, content: string) => {
-  const response = await api.post('/api/whispers', { receiverId, content });
-  return response.data;
+  try {
+    const response = await api.post('/api/whispers', { receiverId, content });
+    return response.data;
+  } catch (error) {
+    console.error('Error sending whisper:', error);
+    throw error?.response?.data || error;
+  }
 };
 
 export const getMyWhispers = async () => {
-  const response = await api.get('/api/whispers');
-  return response.data;
+  try {
+    const response = await api.get('/api/whispers');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching whispers:', error);
+    throw error?.response?.data || error;
+  }
 };
 
 export const getWhisperConversation = async (userId: string) => {
-  const response = await api.get(`/api/whispers/${userId}`);
-  return response.data;
+  try {
+    const response = await api.get(`/api/whispers/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching whisper conversation:', error);
+    throw error?.response?.data || error;
+  }
+};
+
+// Mark whisper as read
+export const markWhisperAsRead = async (whisperId: string) => {
+  try {
+    const response = await api.put(`/api/whispers/${whisperId}/read`);
+    return response.data;
+  } catch (error) {
+    console.error('Error marking whisper as read:', error);
+    throw error?.response?.data || error;
+  }
 };
 
 // Add new function to join a circle from an invitation
 export const joinGhostCircle = async (circleId: string) => {
   const response = await api.post(`/api/ghost-circles/${circleId}/join`);
+  return response.data;
+};
+
+// Get circle details by ID
+export const getGhostCircleById = async (circleId: string) => {
+  const response = await api.get(`/api/ghost-circles/${circleId}`);
   return response.data;
 };
 

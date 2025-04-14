@@ -12,8 +12,10 @@ import { Input } from "@/components/ui/input";
 import { MessageSquare, Search, Loader } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { sendWhisper } from "@/lib/api";
+import { searchUsers, sendWhisper } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import debounce from "lodash/debounce";
+import { useNavigate } from "react-router-dom";
 
 interface WhisperModalProps {
   open: boolean;
@@ -22,11 +24,13 @@ interface WhisperModalProps {
 
 const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [wordCount, setWordCount] = useState(0);
   const [username, setUsername] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
   const maxWords = 20;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,13 +42,49 @@ const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUsername(e.target.value);
     setSelectedUser(null);
-    // In a full implementation, you would add a debounced search here
+    
+    if (e.target.value.trim()) {
+      setIsSearching(true);
+      debouncedSearch(e.target.value);
+    } else {
+      setSearchResults([]);
+      setIsSearching(false);
+    }
   };
+
+  const performSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+    
+    try {
+      const results = await searchUsers(query);
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Error searching users:", error);
+      toast({
+        variant: "destructive",
+        title: "Search failed",
+        description: "Failed to search for users. Please try again."
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const debouncedSearch = React.useCallback(
+    debounce((query: string) => {
+      performSearch(query);
+    }, 300),
+    []
+  );
 
   const sendWhisperMutation = useMutation({
     mutationFn: ({ receiverId, content }: { receiverId: string, content: string }) => 
       sendWhisper(receiverId, content),
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Whisper sent",
         description: "Your anonymous whisper has been delivered."
@@ -54,6 +94,11 @@ const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
       setUsername("");
       setSelectedUser(null);
       onOpenChange(false);
+      
+      // Navigate to whisper conversation
+      if (data && data.receiver) {
+        navigate("/whispers");
+      }
     },
     onError: (error) => {
       toast({
@@ -80,21 +125,9 @@ const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
     });
   };
 
-  // In a full implementation, this would be a proper API call to search users
-  const searchUser = () => {
-    // Mock search result for demonstration
-    if (username.trim()) {
-      setSearchResults([
-        { _id: "mock-user-1", username: username, anonymousAlias: "Mystery" + username }
-      ]);
-    } else {
-      setSearchResults([]);
-    }
-  };
-
   const selectUser = (user) => {
     setSelectedUser(user);
-    setUsername(user.username);
+    setUsername(user.anonymousAlias);
     setSearchResults([]);
   };
 
@@ -119,7 +152,7 @@ const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
             <div className="relative">
               <div className="flex items-center">
                 <Input
-                  placeholder="To: @username"
+                  placeholder="To: @username or anonymous alias"
                   value={username}
                   onChange={handleUsernameChange}
                   className="bg-background border-undercover-purple/30 pr-10"
@@ -128,26 +161,50 @@ const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
                   variant="ghost" 
                   size="icon" 
                   className="absolute right-0" 
-                  onClick={searchUser}
+                  disabled={isSearching}
                 >
-                  <Search size={16} />
+                  {isSearching ? (
+                    <Loader size={16} className="animate-spin" />
+                  ) : (
+                    <Search size={16} />
+                  )}
                 </Button>
               </div>
               
               {searchResults.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full bg-background border border-undercover-purple/30 rounded-md shadow-md">
+                <div className="absolute z-10 mt-1 w-full bg-background border border-undercover-purple/30 rounded-md shadow-md max-h-60 overflow-auto">
                   {searchResults.map(user => (
                     <div 
                       key={user._id} 
-                      className="p-2 hover:bg-undercover-purple/10 cursor-pointer"
+                      className="p-2 hover:bg-undercover-purple/10 cursor-pointer flex items-center"
                       onClick={() => selectUser(user)}
                     >
-                      <div className="flex items-center">
-                        <span className="mr-2">{user.anonymousAlias}</span>
-                        <span className="text-xs text-muted-foreground">@{user.username}</span>
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center bg-undercover-dark mr-2">
+                        {user.avatarEmoji || "🎭"}
+                      </div>
+                      <div>
+                        <div className="flex items-center">
+                          <span className="mr-2">{user.anonymousAlias}</span>
+                          {user.username && (
+                            <span className="text-xs text-muted-foreground">@{user.username}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+              
+              {isSearching && (
+                <div className="absolute z-10 mt-1 w-full text-center py-2 bg-background border border-undercover-purple/30 rounded-md shadow-md">
+                  <Loader size={16} className="animate-spin inline mr-2" />
+                  Searching...
+                </div>
+              )}
+              
+              {!isSearching && username && searchResults.length === 0 && (
+                <div className="absolute z-10 mt-1 w-full text-center py-2 bg-background border border-undercover-purple/30 rounded-md shadow-md">
+                  No users found
                 </div>
               )}
             </div>

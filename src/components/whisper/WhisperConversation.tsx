@@ -1,12 +1,13 @@
 
 import React, { useState, useRef, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getWhisperConversation, sendWhisper } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Loader } from "lucide-react";
+import { ArrowLeft, Send, Loader, User } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import AvatarGenerator from "@/components/user/AvatarGenerator";
 
 interface WhisperConversationProps {
   partnerId: string;
@@ -17,11 +18,13 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
   const { user } = useAuth();
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef(null);
+  const queryClient = useQueryClient();
   
   const { data: conversation, isLoading, error, refetch } = useQuery({
     queryKey: ['whisperConversation', partnerId],
     queryFn: () => getWhisperConversation(partnerId),
-    enabled: !!partnerId && !!user
+    enabled: !!partnerId && !!user,
+    refetchInterval: 10000, // Refresh every 10 seconds to check for new messages
   });
 
   const sendWhisperMutation = useMutation({
@@ -29,6 +32,7 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
     onSuccess: () => {
       setMessage("");
       refetch();
+      queryClient.invalidateQueries({ queryKey: ['whispers'] });
     },
     onError: (error) => {
       toast({
@@ -59,6 +63,57 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const formatDate = (timestamp) => {
+    if (!timestamp) return "";
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
+  // Group messages by date
+  const groupMessagesByDate = (messages) => {
+    if (!messages || messages.length === 0) return [];
+    
+    const groups = [];
+    let currentDate = null;
+    let currentGroup = [];
+    
+    messages.forEach(message => {
+      const messageDate = formatDate(message.createdAt);
+      
+      if (messageDate !== currentDate) {
+        if (currentGroup.length > 0) {
+          groups.push({
+            date: currentDate,
+            messages: currentGroup
+          });
+        }
+        currentDate = messageDate;
+        currentGroup = [message];
+      } else {
+        currentGroup.push(message);
+      }
+    });
+    
+    if (currentGroup.length > 0) {
+      groups.push({
+        date: currentDate,
+        messages: currentGroup
+      });
+    }
+    
+    return groups;
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -79,11 +134,12 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
   if (!conversation) return null;
 
   const { partner, messages, hasRecognized } = conversation;
+  const messageGroups = groupMessagesByDate(messages);
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-border flex items-center">
+      <div className="p-4 border-b border-border flex items-center sticky top-0 bg-background z-10">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -93,14 +149,18 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
           <ArrowLeft />
         </Button>
         <div className="flex items-center space-x-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-undercover-dark">
-            {partner.avatarEmoji || "🎭"}
-          </div>
+          <AvatarGenerator
+            emoji={partner.avatarEmoji || "🎭"} 
+            nickname={partner.anonymousAlias}
+            color="#6E59A5"
+            size="md"
+          />
           <div>
-            <h3 className="font-medium">
+            <h3 className="font-medium flex items-center">
               {partner.anonymousAlias}
               {hasRecognized && partner.username && (
-                <span className="ml-2 text-xs text-muted-foreground">
+                <span className="ml-2 text-xs bg-undercover-purple/20 text-undercover-light-purple px-2 py-1 rounded-full flex items-center">
+                  <User size={12} className="mr-1" />
                   @{partner.username}
                 </span>
               )}
@@ -113,39 +173,58 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
       </div>
       
       {/* Messages */}
-      <div className="flex-1 overflow-auto p-4 space-y-4">
-        {messages.map((msg) => {
-          const isMe = msg.sender === user._id;
-          return (
-            <div 
-              key={msg._id} 
-              className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`
-                max-w-[80%] 
-                rounded-lg 
-                p-3 
-                ${isMe ? 
-                  'bg-undercover-purple text-white rounded-br-none' : 
-                  'bg-undercover-dark rounded-bl-none'
-                }
-              `}>
-                <p>{msg.content}</p>
-                <div className={`
-                  text-xs mt-1 
-                  ${isMe ? 'text-white/70 text-right' : 'text-muted-foreground'}
-                `}>
-                  {formatTime(msg.createdAt)}
-                </div>
+      <div className="flex-1 overflow-auto p-4 space-y-6">
+        {messageGroups.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+            <p>Start a conversation by sending a message.</p>
+          </div>
+        ) : (
+          messageGroups.map((group, groupIndex) => (
+            <div key={`group-${groupIndex}`} className="space-y-4">
+              <div className="flex justify-center">
+                <span className="text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground">
+                  {group.date}
+                </span>
               </div>
+              
+              {group.messages.map((msg) => {
+                const isMe = msg.sender === user._id;
+                return (
+                  <div 
+                    key={msg._id} 
+                    className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`
+                      max-w-[80%] 
+                      rounded-lg 
+                      p-3 
+                      ${isMe ? 
+                        'bg-undercover-purple text-white rounded-br-none' : 
+                        'bg-undercover-dark rounded-bl-none'
+                      }
+                    `}>
+                      <p className="break-words">{msg.content}</p>
+                      <div className={`
+                        text-xs mt-1 flex items-center justify-end
+                        ${isMe ? 'text-white/70' : 'text-muted-foreground'}
+                      `}>
+                        {formatTime(msg.createdAt)}
+                        {isMe && msg.read && (
+                          <span className="ml-1">✓</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          ))
+        )}
         <div ref={messagesEndRef} />
       </div>
       
       {/* Input */}
-      <div className="border-t border-border p-3">
+      <div className="border-t border-border p-3 sticky bottom-0 bg-background">
         <form onSubmit={handleSendMessage} className="flex items-center">
           <Input 
             value={message}

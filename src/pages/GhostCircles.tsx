@@ -1,11 +1,11 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Ghost, Plus, Users } from "lucide-react";
+import { Ghost, Plus, Users, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getMyGhostCircles } from "@/lib/api";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import CreateGhostCircleModal from "@/components/ghost-circle/CreateGhostCircleModal";
 import GhostCircleCard from "@/components/ghost-circle/GhostCircleCard";
 import CircleFeedView from "@/components/ghost-circle/CircleFeedView";
@@ -28,6 +28,55 @@ const GhostCircles = () => {
     setSelectedCircleId(circleId);
   };
 
+  const handleBackToCircles = () => {
+    setSelectedCircleId(null);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-5xl">
+        <div className="flex items-center justify-between mb-6">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <Skeleton className="h-6 w-3/4 mb-4" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-2/3 mb-4" />
+                <div className="flex justify-between">
+                  <Skeleton className="h-9 w-24" />
+                  <Skeleton className="h-9 w-24" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // If a circle is selected, show its feed view
+  if (selectedCircleId) {
+    return (
+      <div className="container mx-auto px-4 py-6 max-w-5xl">
+        <div className="mb-4 flex items-center">
+          <Button
+            variant="ghost"
+            className="flex items-center text-muted-foreground mr-4"
+            onClick={handleBackToCircles}
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Circles
+          </Button>
+        </div>
+        <CircleFeedView circleId={selectedCircleId} onBack={handleBackToCircles} />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
       <div className="flex flex-col gap-6">
@@ -42,7 +91,7 @@ const GhostCircles = () => {
           </Button>
         </div>
 
-        {ghostCircles.length === 0 && !isLoading ? (
+        {ghostCircles.length === 0 ? (
           <Card className="bg-gray-50 border border-dashed border-gray-300">
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
               <Ghost className="h-12 w-12 text-gray-400 mb-4" />
@@ -57,36 +106,15 @@ const GhostCircles = () => {
             </CardContent>
           </Card>
         ) : (
-          <Tabs defaultValue="circles" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="circles" className="flex items-center gap-1">
-                <Users size={16} />
-                My Circles
-              </TabsTrigger>
-              {selectedCircleId && (
-                <TabsTrigger value="feed" className="flex items-center gap-1">
-                  <Ghost size={16} />
-                  Circle Feed
-                </TabsTrigger>
-              )}
-            </TabsList>
-            
-            <TabsContent value="circles">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {ghostCircles.map((circle) => (
-                  <GhostCircleCard 
-                    key={circle._id} 
-                    circle={circle} 
-                    onSelect={handleCircleSelect} 
-                  />
-                ))}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="feed">
-              {selectedCircleId && <CircleFeedView circleId={selectedCircleId} />}
-            </TabsContent>
-          </Tabs>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {ghostCircles.map((circle) => (
+              <GhostCircleCard 
+                key={circle._id} 
+                circle={circle} 
+                onSelect={handleCircleSelect} 
+              />
+            ))}
+          </div>
         )}
       </div>
 

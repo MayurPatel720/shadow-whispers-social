@@ -29,6 +29,8 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/invite" element={<InvitePage />} />
+            
+            {/* Main Routes with AppShell */}
             <Route
               path="/"
               element={
@@ -69,6 +71,21 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/circles"
+              element={<Navigate to="/ghost-circles" replace />}
+            />
+            <Route
+              path="/discover"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <Index />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
