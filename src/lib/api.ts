@@ -74,13 +74,12 @@ export const addFriend = async (friendUsername: string) => {
   return response.data;
 };
 
-// User search API call
 export const searchUsers = async (query: string) => {
   try {
     if (!query || query.trim() === '') {
       return [];
     }
-    const response = await api.get(`/api/users/search?q=${encodeURIComponent(query)}`);
+    const response = await api.get(`/api/ghost-circles/users/search?q=${encodeURIComponent(query)}`);
     return response.data;
   } catch (error) {
     console.error('Error searching users:', error);

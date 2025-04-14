@@ -4,7 +4,6 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Loader } from "lucide-react";
 import { searchUsers } from "@/lib/api";
-import { Avatar } from "@/components/ui/avatar";
 
 interface User {
   _id: string;
