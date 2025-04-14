@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -22,7 +22,7 @@ interface AppShellProps {
 const AppShell = ({ children }: AppShellProps) => {
   const { logout, user } = useAuth();
   const location = useLocation();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {

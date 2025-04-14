@@ -1,3 +1,4 @@
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useState } from "react";
@@ -91,7 +92,7 @@ const GlobalFeed = () => {
       )}
 
       <CreatePostModal 
-        isOpen={isCreatePostOpen} 
+        open={isCreatePostOpen} 
         onClose={() => setIsCreatePostOpen(false)}
         onSuccess={handlePostCreated}
       />

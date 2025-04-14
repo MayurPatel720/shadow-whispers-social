@@ -73,7 +73,7 @@ const CircleFeedView: React.FC<CircleFeedViewProps> = ({ circleId }) => {
       ) : (
         <div className="space-y-4">
           {posts.map((post) => (
-            <PostCard key={post._id} post={post} onPostUpdated={refetch} />
+            <PostCard key={post._id} post={post} onRefresh={refetch} />
           ))}
         </div>
       )}
