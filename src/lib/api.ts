@@ -1,4 +1,3 @@
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import axios from 'axios';
@@ -77,8 +76,13 @@ export const addFriend = async (friendUsername: string) => {
 
 // User search API call
 export const searchUsers = async (query: string) => {
-  const response = await api.get(`/api/users/search?q=${encodeURIComponent(query)}`);
-  return response.data;
+  try {
+    const response = await api.get(`/api/ghost-circles/users/search?q=${encodeURIComponent(query)}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error searching users:', error);
+    return [];
+  }
 };
 
 // Ghost Circles API calls
@@ -121,7 +125,6 @@ export const createPost = async (
     throw error?.response?.data || error;
   }
 };
-
 
 export const updatePost = async (postId: string, content: string, imageUrl?: string) => {
   const postData: {
@@ -202,6 +205,12 @@ export const getMyWhispers = async () => {
 
 export const getWhisperConversation = async (userId: string) => {
   const response = await api.get(`/api/whispers/${userId}`);
+  return response.data;
+};
+
+// Add new function to join a circle from an invitation
+export const joinGhostCircle = async (circleId: string) => {
+  const response = await api.post(`/api/ghost-circles/${circleId}/join`);
   return response.data;
 };
 

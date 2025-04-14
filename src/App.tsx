@@ -14,6 +14,7 @@ import WhispersPage from "./pages/WhispersPage";
 import ProfilePage from "./pages/ProfilePage";
 import GhostCircles from "./pages/GhostCircles";
 import AppShell from "./components/layout/AppShell";
+import InvitePage from "./pages/InvitePage";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/invite" element={<InvitePage />} />
             <Route
               path="/"
               element={
