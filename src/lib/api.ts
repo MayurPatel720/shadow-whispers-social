@@ -4,8 +4,8 @@ import axios from 'axios';
 
 // Create axios instance with base URL
 // Use a default API URL that works with the development environment
-// const API_URL = 'https://undercover-service.onrender.com';
-const API_URL = 'http://localhost:8900';
+const API_URL = 'https://undercover-service.onrender.com';
+// const API_URL = 'http://localhost:8900';
 
 const api = axios.create({
   baseURL: API_URL,
