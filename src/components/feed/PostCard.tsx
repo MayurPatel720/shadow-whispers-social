@@ -203,11 +203,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId, onRefresh, sho
     color: "#9333EA", // Default purple color
   };
   
-  // Process image URL to ensure it's valid
   const imageUrl = post.imageUrl ? (
     post.imageUrl.startsWith('http') ? post.imageUrl : `${import.meta.env.VITE_API_URL || 'https://undercover-service.onrender.com'}${post.imageUrl}`
   ) : null;
-  
   return (
     <Card className="border border-undercover-purple/20 bg-card shadow-md hover:shadow-lg transition-shadow mb-4">
       <CardHeader className="p-4 pb-2">

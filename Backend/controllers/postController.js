@@ -72,6 +72,36 @@ const createPost = asyncHandler(async (req, res) => {
 
   // Return the newly created post
   res.status(201).json(post);
+});const deletepost = asyncHandler(async (req, res) => {
+  try {
+    const  postId  = req.params.postId;
+
+    // Find the post to be deleted
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Verify the current user is the owner of the post
+    if (post.user.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to delete this post' });
+    }
+
+    // Remove the post from the database using findByIdAndDelete
+    await Post.findByIdAndDelete(postId);
+
+    // Remove the post reference from the user's posts array
+    await User.findByIdAndUpdate(
+      req.user.id, 
+      { $pull: { posts: postId } }, 
+      { new: true }
+    );
+
+    res.status(200).json({ message: 'Post and user reference deleted successfully' });
+  } catch (error) {
+    console.error('Delete post error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // @desc    Update a post
@@ -104,37 +134,6 @@ const updatePost = asyncHandler(async (req, res) => {
   res.json(updatedPost);
 });
 
-const deletepost = asyncHandler(async (req, res) => {
-  try {
-    const  postId  = req.params.postId;
-
-    // Find the post to be deleted
-    const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ message: 'Post not found' });
-    }
-
-    // Verify the current user is the owner of the post
-    if (post.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to delete this post' });
-    }
-
-    // Remove the post from the database using findByIdAndDelete
-    await Post.findByIdAndDelete(postId);
-
-    // Remove the post reference from the user's posts array
-    await User.findByIdAndUpdate(
-      req.user.id, 
-      { $pull: { posts: postId } }, 
-      { new: true }
-    );
-
-    res.status(200).json({ message: 'Post and user reference deleted successfully' });
-  } catch (error) {
-    console.error('Delete post error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
 
 
 

@@ -48,7 +48,7 @@ const CircleFeedView: React.FC<CircleFeedViewProps> = ({ circleId }) => {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-medium flex items-center gap-2">
           <Ghost className="h-5 w-5 text-purple-500" />
-          Circle Feed
+          Circle Feed for {posts[0].anonymousAlias}
         </h2>
         <Button 
           onClick={() => setIsCreateModalOpen(true)}

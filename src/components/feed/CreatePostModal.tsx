@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -6,6 +5,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,13 +27,40 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   ghostCircleId,
 }) => {
   const [content, setContent] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Image must be under 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() && !imageUrl) {
+    if (!content.trim() && !imageFile) {
       return toast({
         title: "Content required",
         description: "Please add some text or an image to your post.",
@@ -42,129 +69,111 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     }
 
     setIsSubmitting(true);
+    let uploadedImageUrl: string | null = null;
+
     try {
-      await createPost(content, ghostCircleId, imageUrl);
+      if (imageFile) {
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append("file", imageFile);
+        formData.append("upload_preset", "undercover");
+
+        const res = await fetch("https://api.cloudinary.com/v1_1/ddtqri4py/image/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+        uploadedImageUrl = data.secure_url;
+        console.log("Image uploaded to Cloudinary:", uploadedImageUrl);
+        setIsUploading(false);
+      }
+
+      await createPost(content, ghostCircleId, uploadedImageUrl);
       setContent("");
-      setImageUrl("");
+      removeImage();
+
       toast({
         title: "Post created",
-        description: ghostCircleId 
-          ? "Your anonymous post has been shared to the ghost circle." 
+        description: ghostCircleId
+          ? "Your anonymous post has been shared in the Ghost Circle."
           : "Your anonymous post has been shared.",
       });
+
       onSuccess?.();
     } catch (error) {
       console.error("Error creating post:", error);
       toast({
         title: "Failed to create post",
-        description: "Please try again later.",
+        description: "Something went wrong. Please try again later.",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Only allow images under 5MB
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Image must be less than 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsUploading(true);
-
-    // Create FormData for image upload
-    const formData = new FormData();
-    formData.append("image", file);
-
-    // Simulate image upload (replace with actual upload logic)
-    setTimeout(() => {
-      // Mock URL for demo purposes - replace with actual upload logic
-      const mockImageUrl = URL.createObjectURL(file);
-      setImageUrl(mockImageUrl);
       setIsUploading(false);
-    }, 1500);
-  };
-
-  const removeImage = () => {
-    setImageUrl("");
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[500px] bg-gray-800 text-white border-purple-600">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-purple-300">
             {ghostCircleId ? (
               <>
-                <Ghost className="h-5 w-5 text-purple-500" />
+                <Ghost className="w-5 h-5 text-purple-500" />
                 Create Ghost Circle Post
               </>
             ) : (
               "Create Anonymous Post"
             )}
           </DialogTitle>
-          <DialogDescription>
-            {ghostCircleId 
-              ? "Your post will only be visible to members of this ghost circle."
-              : "Share your thoughts anonymously with the world."
-            }
+          <DialogDescription className="text-gray-400">
+            {ghostCircleId
+              ? "This post will be visible only within this Ghost Circle."
+              : "Your identity will remain hidden."}
           </DialogDescription>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <Textarea
             placeholder="What's on your mind?"
+            className="min-h-[120px] bg-gray-700 border-gray-600 focus:border-purple-500"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="min-h-[120px]"
           />
 
-          {imageUrl && (
-            <div className="relative">
+          {imagePreview && (
+            <div className="relative mt-3 border border-gray-600 rounded-md overflow-hidden">
               <img
-                src={imageUrl}
-                alt="Post image"
-                className="rounded-md w-full max-h-[200px] object-cover"
+                src={imagePreview}
+                alt="Image Preview"
+                className="w-full max-h-[200px] object-contain"
               />
               <Button
                 type="button"
-                variant="secondary"
                 size="icon"
-                className="absolute top-2 right-2 bg-black/70 hover:bg-black/90 text-white rounded-full p-1"
+                variant="destructive"
+                className="absolute top-2 right-2 w-8 h-8 opacity-90 hover:opacity-100"
                 onClick={removeImage}
               >
-                <X className="h-4 w-4" />
+                <X size={16} />
               </Button>
             </div>
           )}
 
-          <div className="flex justify-between items-center pt-2">
+          <div className="flex justify-between items-center mt-2">
             <div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="text-gray-500"
+                className="text-purple-300 border-purple-700"
                 onClick={() => document.getElementById("image-upload")?.click()}
                 disabled={isUploading || isSubmitting}
               >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Uploading...
-                  </>
-                ) : (
-                  <>
-                    <ImageIcon className="h-4 w-4 mr-2" /> Add Image
-                  </>
-                )}
+                <ImageIcon className="mr-2 w-4 h-4" />
+                {isUploading ? "Uploading..." : "Add Image"}
               </Button>
               <input
                 type="file"
@@ -172,23 +181,39 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 accept="image/*"
                 className="hidden"
                 onChange={handleImageUpload}
-                disabled={isUploading || isSubmitting}
               />
             </div>
+
+            <p className="text-xs text-gray-400">
+              Post lasts 24h, 1 like = +1h.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+              className="border-gray-600"
+            >
+              Cancel
+            </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || isUploading || (!content.trim() && !imageUrl)}
-              className={ghostCircleId ? "bg-purple-600 hover:bg-purple-700" : ""}
+              className="bg-purple-600 hover:bg-purple-700"
+              disabled={(!content.trim() && !imageFile) || isSubmitting}
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Posting...
+                  <Loader2 size={16} className="animate-spin mr-2" />
+                  Posting...
                 </>
               ) : (
-                "Post"
+                "Post Anonymously"
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
