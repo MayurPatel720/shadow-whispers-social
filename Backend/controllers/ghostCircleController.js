@@ -125,9 +125,33 @@ const getGhostCircleById = asyncHandler(async (req, res) => {
   res.json(ghostCircle);
 });
 
+// @desc    Search for users to invite to a ghost circle
+// @route   GET /api/users/search
+// @access  Private
+const searchUsers = asyncHandler(async (req, res) => {
+  const { q } = req.query;
+  
+  if (!q || q.trim().length < 1) {
+    return res.json([]);
+  }
+  
+  // Find users whose username or anonymous alias contains the query string
+  const users = await User.find({
+    $or: [
+      { username: { $regex: q, $options: 'i' } },
+      { anonymousAlias: { $regex: q, $options: 'i' } }
+    ]
+  })
+  .select('_id username avatarEmoji anonymousAlias') // Only select fields we need
+  .limit(10); // Limit results to 10 users
+  
+  res.json(users);
+});
+
 module.exports = {
   createGhostCircle,
   getMyGhostCircles,
   inviteToGhostCircle,
   getGhostCircleById,
+  searchUsers,
 };

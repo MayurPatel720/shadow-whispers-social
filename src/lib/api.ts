@@ -75,6 +75,12 @@ export const addFriend = async (friendUsername: string) => {
   return response.data;
 };
 
+// User search API call
+export const searchUsers = async (query: string) => {
+  const response = await api.get(`/api/users/search?q=${encodeURIComponent(query)}`);
+  return response.data;
+};
+
 // Ghost Circles API calls
 export const createGhostCircle = async (name: string, description: string) => {
   const response = await api.post('/api/ghost-circles', { name, description });

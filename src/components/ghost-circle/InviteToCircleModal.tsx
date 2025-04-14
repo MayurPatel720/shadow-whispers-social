@@ -3,13 +3,15 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Ghost, UserPlus } from "lucide-react";
+import { Ghost, UserPlus, Share2, ExternalLink } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTabs,
+  DialogTab,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -19,10 +21,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { inviteToGhostCircle } from "@/lib/api";
+import UserSearchInput from "./UserSearchInput";
 
 const inviteSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -42,6 +50,7 @@ const InviteToCircleModal: React.FC<InviteToCircleModalProps> = ({
   circleName,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState("search");
 
   const form = useForm<z.infer<typeof inviteSchema>>({
     resolver: zodResolver(inviteSchema),
@@ -74,6 +83,31 @@ const InviteToCircleModal: React.FC<InviteToCircleModalProps> = ({
     }
   };
 
+  const handleSelectUser = (username: string) => {
+    form.setValue("username", username);
+  };
+
+  const inviteLink = `${window.location.origin}/invite?circleId=${circleId}&name=${encodeURIComponent(circleName)}`;
+
+  const shareViaWhatsApp = () => {
+    const message = `Join my Ghost Circle "${circleName}" on UnderCover: ${inviteLink}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+  };
+
+  const shareViaTelegram = () => {
+    const message = `Join my Ghost Circle "${circleName}" on UnderCover: ${inviteLink}`;
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(`Join my Ghost Circle "${circleName}" on UnderCover`)}`, "_blank");
+  };
+
+  const shareViaInstagram = () => {
+    // Instagram doesn't support direct sharing via URL, so we'll copy to clipboard
+    navigator.clipboard.writeText(`Join my Ghost Circle "${circleName}" on UnderCover: ${inviteLink}`);
+    toast({
+      title: "Link copied",
+      description: "Share this link on Instagram to invite friends",
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -87,38 +121,94 @@ const InviteToCircleModal: React.FC<InviteToCircleModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Friend's Username</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Enter username" 
-                      {...field} 
-                      autoComplete="off"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="search">Search Users</TabsTrigger>
+            <TabsTrigger value="share">Share Link</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="search" className="space-y-4 pt-4">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Find a Friend</FormLabel>
+                      <FormControl>
+                        <UserSearchInput onSelectUser={handleSelectUser} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="flex justify-end">
+                <div className="flex justify-end">
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    {isSubmitting ? "Inviting..." : "Send Invitation"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </TabsContent>
+          
+          <TabsContent value="share" className="space-y-4 pt-4">
+            <div className="space-y-3">
+              <div className="p-3 bg-muted rounded-md text-sm break-all">
+                {inviteLink}
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2">
+                <Button 
+                  onClick={shareViaWhatsApp}
+                  variant="outline" 
+                  className="flex flex-col items-center gap-2 h-auto py-4"
+                >
+                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                    <i className="text-lg">📱</i>
+                  </div>
+                  <span className="text-xs">WhatsApp</span>
+                </Button>
+                
+                <Button 
+                  onClick={shareViaTelegram}
+                  variant="outline" 
+                  className="flex flex-col items-center gap-2 h-auto py-4"
+                >
+                  <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                    <i className="text-lg">📨</i>
+                  </div>
+                  <span className="text-xs">Telegram</span>
+                </Button>
+                
+                <Button 
+                  onClick={shareViaInstagram}
+                  variant="outline" 
+                  className="flex flex-col items-center gap-2 h-auto py-4"
+                >
+                  <div className="w-10 h-10 rounded-full bg-pink-600 flex items-center justify-center">
+                    <i className="text-lg">📷</i>
+                  </div>
+                  <span className="text-xs">Instagram</span>
+                </Button>
+              </div>
+              
               <Button 
-                type="submit" 
-                disabled={isSubmitting} 
-                className="bg-purple-600 hover:bg-purple-700"
+                onClick={() => navigator.clipboard.writeText(inviteLink)}
+                className="w-full bg-purple-600 hover:bg-purple-700"
               >
-                <UserPlus className="h-4 w-4 mr-2" />
-                {isSubmitting ? "Inviting..." : "Send Invitation"}
+                <Share2 className="h-4 w-4 mr-2" />
+                Copy Invite Link
               </Button>
             </div>
-          </form>
-        </Form>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

@@ -6,6 +6,7 @@ const {
   getMyGhostCircles,
   inviteToGhostCircle,
   getGhostCircleById,
+  searchUsers,
 } = require('../controllers/ghostCircleController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -19,5 +20,9 @@ router.route('/:id')
 
 router.route('/:id/invite')
   .post(protect, inviteToGhostCircle);
+
+// User search for ghost circle invitations
+router.route('/users/search')
+  .get(protect, searchUsers);
 
 module.exports = router;
