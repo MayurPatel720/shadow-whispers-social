@@ -1,3 +1,4 @@
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useState } from "react";
@@ -24,11 +25,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import AvatarGenerator from "../user/AvatarGenerator";
 import { useAuth } from "@/context/AuthContext";
-import { likePost, addComment, getComments, deletePost } from "@/lib/api";
+import { likePost, addComment, getComments, deletePost, editComment, deleteComment, replyToComment } from "@/lib/api";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import EditPostModal from "./EditPostModal";
 import DeletePostDialog from "./DeletePostDialog";
+import CommentItem from "./CommentItem";
 
 interface PostCardProps {
   post: any; // Will refine the type when we have the full PostModel
@@ -114,7 +116,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId, onRefresh, sho
   
     try {
       setIsSubmitting(true);
-      await addComment(post._id, newComment.trim(),user.anonymousAlias);
+      const response = await addComment(post._id, newComment.trim(), user.anonymousAlias);
   
       setNewComment("");
       loadComments(); // Reload comments after adding a new one
@@ -134,8 +136,61 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId, onRefresh, sho
       setIsSubmitting(false);
     }
   };
-  
 
+  const handleEditComment = async (commentId: string, content: string) => {
+    try {
+      await editComment(post._id, commentId, content);
+      toast({
+        title: "Comment updated",
+        description: "Your comment has been updated successfully!",
+      });
+      loadComments(); // Reload comments after editing
+    } catch (error) {
+      console.error("Error editing comment:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not edit your comment. Please try again.",
+      });
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await deleteComment(post._id, commentId);
+      toast({
+        title: "Comment deleted",
+        description: "Your comment has been deleted successfully!",
+      });
+      loadComments(); // Reload comments after deleting
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not delete your comment. Please try again.",
+      });
+    }
+  };
+
+  const handleReplyToComment = async (commentId: string, content: string) => {
+    try {
+      await replyToComment(post._id, commentId, content, user.anonymousAlias);
+      toast({
+        title: "Reply added",
+        description: "Your reply has been posted successfully!",
+      });
+      loadComments(); // Reload comments after adding reply
+    } catch (error) {
+      console.error("Error posting reply:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not post your reply. Please try again.",
+      });
+    }
+  };
+  
   // Format the post time
   const postTime = post.createdAt 
     ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })
@@ -263,25 +318,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUserId, onRefresh, sho
                   <div className="animate-spin h-5 w-5 border-2 border-undercover-purple rounded-full border-t-transparent"></div>
                 </div>
               ) : comments.length > 0 ? (
-                <div className="space-y-3 max-h-60 overflow-y-auto">
+                <div className="space-y-4 max-h-60 overflow-y-auto">
                   {comments.map((comment) => (
-                    <div key={comment._id} className="flex space-x-2">
-                      <AvatarGenerator
-                        emoji={comment.avatarEmoji || "🎭"}
-                        nickname={comment.anonymousAlias || "Anonymous"}
-                        size="xs"
-                        color="#9333EA"
-                      />
-                      <div className="bg-muted p-2 rounded-md text-sm flex-1">
-                        <div className="flex justify-between">
-                          <span className="font-medium text-xs">{comment.anonymousAlias || "Anonymous"}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                          </span>
-                        </div>
-                        <p className="mt-1">{comment.content}</p>
-                      </div>
-                    </div>
+                    <CommentItem 
+                      key={comment._id}
+                      comment={comment}
+                      postId={post._id}
+                      onDelete={handleDeleteComment}
+                      onEdit={handleEditComment}
+                      onReply={handleReplyToComment}
+                    />
                   ))}
                 </div>
               ) : (

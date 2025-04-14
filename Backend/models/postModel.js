@@ -1,6 +1,41 @@
 
 const mongoose = require('mongoose');
 
+// Define a comment schema to be reused in both comments and replies
+const commentSchema = new mongoose.Schema({
+  _id: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: () => new mongoose.Types.ObjectId()
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  anonymousAlias: {
+    type: String,
+    required: true,
+  },
+  avatarEmoji: {
+    type: String,
+    default: '🎭',
+  },
+  content: {
+    type: String,
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  replies: [
+    {
+      type: mongoose.Schema.Types.Mixed, // Will recursively use the same schema
+      default: [],
+    }
+  ]
+});
+
 const postSchema = mongoose.Schema(
   {
     user: {
@@ -40,26 +75,7 @@ const postSchema = mongoose.Schema(
         },
       },
     ],
-    comments: [
-      {
-        user: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
-        },
-        anonymousAlias: {
-          type: String,
-          required: true,
-        },
-        content: {
-          type: String,
-          required: true,
-        },
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
+    comments: [commentSchema],
     ghostCircle: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'GhostCircle',

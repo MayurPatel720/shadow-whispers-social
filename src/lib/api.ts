@@ -1,3 +1,4 @@
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import axios from 'axios';
@@ -147,12 +148,24 @@ export const likePost = async (postId: string) => {
 
 // Comments API calls
 export const addComment = async (postId: string, content: string, anonymousAlias: string) => {
-  console.log(content, anonymousAlias);
   const response = await api.post(`/api/posts/${postId}/comments`, { content, anonymousAlias });
-  
   return response.data;
 };
 
+export const editComment = async (postId: string, commentId: string, content: string) => {
+  const response = await api.put(`/api/posts/${postId}/comments/${commentId}`, { content });
+  return response.data;
+};
+
+export const deleteComment = async (postId: string, commentId: string) => {
+  const response = await api.delete(`/api/posts/${postId}/comments/${commentId}`);
+  return response.data;
+};
+
+export const replyToComment = async (postId: string, commentId: string, content: string, anonymousAlias: string) => {
+  const response = await api.post(`/api/posts/${postId}/comments/${commentId}/reply`, { content, anonymousAlias });
+  return response.data;
+};
 
 export const getComments = async (postId: string) => {
   try {
@@ -164,6 +177,7 @@ export const getComments = async (postId: string) => {
     return [];
   }
 };
+
 // Whispers API calls
 export const sendWhisper = async (receiverId: string, content: string) => {
   const response = await api.post('/api/whispers', { receiverId, content });

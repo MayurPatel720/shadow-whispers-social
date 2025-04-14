@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { updatePost } from "@/lib/api";
 
 interface EditPostModalProps {
   open: boolean;
@@ -33,25 +34,22 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
     
     setIsSubmitting(true);
     try {
-      // This would be replaced with an actual API call in a real implementation
-      // await updatePost(post._id, content);
+      // Make actual API call to update the post
+      await updatePost(post._id, content, post.imageUrl);
       
-      // For now, we'll simulate an API call with a timeout
-      setTimeout(() => {
-        toast({
-          title: "Post updated",
-          description: "Your post has been updated successfully",
-        });
-        onSuccess();
-        onOpenChange(false);
-        setIsSubmitting(false);
-      }, 1000);
+      toast({
+        title: "Post updated",
+        description: "Your post has been updated successfully",
+      });
+      onSuccess();
+      onOpenChange(false);
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error updating post",
         description: "Could not update your post. Please try again.",
       });
+    } finally {
       setIsSubmitting(false);
     }
   };

@@ -71,7 +71,39 @@ const createPost = asyncHandler(async (req, res) => {
 
   // Return the newly created post
   res.status(201).json(post);
-});const deletepost = asyncHandler(async (req, res) => {
+});
+
+// @desc    Update a post
+// @route   PUT /api/posts/:id
+// @access  Private
+const updatePost = asyncHandler(async (req, res) => {
+  const { content, imageUrl } = req.body;
+  const postId = req.params.id;
+
+  // Find the post
+  const post = await Post.findById(postId);
+  
+  if (!post) {
+    res.status(404);
+    throw new Error('Post not found');
+  }
+
+  // Check if user is the author
+  if (post.user.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Not authorized to update this post');
+  }
+
+  // Update post fields
+  if (content !== undefined) post.content = content;
+  if (imageUrl !== undefined) post.imageUrl = imageUrl;
+
+  // Save updated post
+  const updatedPost = await post.save();
+  res.json(updatedPost);
+});
+
+const deletepost = asyncHandler(async (req, res) => {
   try {
     const  postId  = req.params.postId;
 
@@ -140,6 +172,8 @@ const addComment = asyncHandler(async (req, res) => {
       user: req.user._id, // comes from auth middleware
       content,
       anonymousAlias,
+      avatarEmoji: req.user.avatarEmoji || "🎭",
+      _id: new mongoose.Types.ObjectId()
     };
 
     // Add new comment to the beginning of the comments array
@@ -161,6 +195,162 @@ const addComment = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Edit a comment
+// @route   PUT /api/posts/:id/comments/:commentId
+// @access  Private
+const editComment = asyncHandler(async (req, res) => {
+  const { content } = req.body;
+  
+  // Validate content
+  if (!content) {
+    res.status(400);
+    throw new Error('Comment content is required');
+  }
+  
+  try {
+    // Find the post
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      res.status(404);
+      throw new Error('Post not found');
+    }
+    
+    // Find the comment by ID
+    const commentIndex = post.comments.findIndex(
+      comment => comment._id.toString() === req.params.commentId
+    );
+    
+    if (commentIndex === -1) {
+      res.status(404);
+      throw new Error('Comment not found');
+    }
+    
+    // Check if user is the comment author
+    if (post.comments[commentIndex].user.toString() !== req.user._id.toString()) {
+      res.status(403);
+      throw new Error('Not authorized to edit this comment');
+    }
+    
+    // Update the comment content
+    post.comments[commentIndex].content = content;
+    
+    // Save the post with updated comment
+    await post.save();
+    
+    res.json({
+      message: 'Comment updated successfully',
+      comment: post.comments[commentIndex]
+    });
+  } catch (error) {
+    console.error('Edit comment error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @desc    Delete a comment
+// @route   DELETE /api/posts/:id/comments/:commentId
+// @access  Private
+const deleteComment = asyncHandler(async (req, res) => {
+  try {
+    // Find the post
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      res.status(404);
+      throw new Error('Post not found');
+    }
+    
+    // Find the comment by ID
+    const commentIndex = post.comments.findIndex(
+      comment => comment._id.toString() === req.params.commentId
+    );
+    
+    if (commentIndex === -1) {
+      res.status(404);
+      throw new Error('Comment not found');
+    }
+    
+    // Check if user is the comment author or post author
+    const isCommentAuthor = post.comments[commentIndex].user.toString() === req.user._id.toString();
+    const isPostAuthor = post.user.toString() === req.user._id.toString();
+    
+    if (!isCommentAuthor && !isPostAuthor) {
+      res.status(403);
+      throw new Error('Not authorized to delete this comment');
+    }
+    
+    // Remove the comment
+    post.comments.splice(commentIndex, 1);
+    
+    // Save the post
+    await post.save();
+    
+    res.json({ message: 'Comment deleted successfully' });
+  } catch (error) {
+    console.error('Delete comment error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @desc    Reply to a comment
+// @route   POST /api/posts/:id/comments/:commentId/reply
+// @access  Private
+const replyToComment = asyncHandler(async (req, res) => {
+  const { content, anonymousAlias } = req.body;
+  
+  // Validate content and alias
+  if (!content || !anonymousAlias) {
+    res.status(400);
+    throw new Error('Reply content and alias are required');
+  }
+  
+  try {
+    // Find the post
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      res.status(404);
+      throw new Error('Post not found');
+    }
+    
+    // Find the comment to reply to
+    const commentIndex = post.comments.findIndex(
+      comment => comment._id.toString() === req.params.commentId
+    );
+    
+    if (commentIndex === -1) {
+      res.status(404);
+      throw new Error('Comment not found');
+    }
+    
+    // Create the reply
+    const reply = {
+      user: req.user._id,
+      content,
+      anonymousAlias,
+      avatarEmoji: req.user.avatarEmoji || "🎭",
+      _id: new mongoose.Types.ObjectId(),
+      createdAt: new Date()
+    };
+    
+    // Initialize replies array if it doesn't exist
+    if (!post.comments[commentIndex].replies) {
+      post.comments[commentIndex].replies = [];
+    }
+    
+    // Add the reply to the comment
+    post.comments[commentIndex].replies.push(reply);
+    
+    // Save the post
+    await post.save();
+    
+    res.status(201).json({
+      message: 'Reply added successfully',
+      reply
+    });
+  } catch (error) {
+    console.error('Reply to comment error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 const getComments = asyncHandler(async (req, res) => {
   const post = await Post.findById(req.params.id);
@@ -323,11 +513,15 @@ const recognizeUser = asyncHandler(async (req, res) => {
 
 module.exports = {
   createPost,
+  updatePost,
   getGlobalFeed,
   getGhostCirclePosts,
   likePost,
   recognizeUser,
   getComments,
   addComment,
+  editComment,
+  deleteComment,
+  replyToComment,
   deletepost
 };

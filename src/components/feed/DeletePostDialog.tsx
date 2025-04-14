@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { deletePost } from "@/lib/api";
 
 interface DeletePostDialogProps {
   open: boolean;
@@ -31,25 +32,21 @@ const DeletePostDialog: React.FC<DeletePostDialogProps> = ({
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      // This would be replaced with an actual API call in a real implementation
-      // await deletePost(postId);
+      await deletePost(postId);
       
-      // For now, we'll simulate an API call with a timeout
-      setTimeout(() => {
-        toast({
-          title: "Post deleted",
-          description: "Your post has been deleted successfully",
-        });
-        onSuccess();
-        onOpenChange(false);
-        setIsDeleting(false);
-      }, 1000);
+      toast({
+        title: "Post deleted",
+        description: "Your post has been deleted successfully",
+      });
+      onSuccess();
+      onOpenChange(false);
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error deleting post",
         description: "Could not delete your post. Please try again.",
       });
+    } finally {
       setIsDeleting(false);
     }
   };
