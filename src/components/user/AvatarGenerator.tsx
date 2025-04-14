@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { cn } from "@/lib/utils";
+import { useNavigate } from 'react-router-dom';
 
 interface AvatarGeneratorProps {
   emoji: string;
@@ -15,6 +16,7 @@ const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({
   color = "#9333EA", 
   size = "md" 
 }) => {
+  const navigate = useNavigate();
   const sizeClasses = {
     "xs": "h-6 w-6 text-xs",
     "sm": "h-8 w-8 text-sm",
@@ -23,7 +25,7 @@ const AvatarGenerator: React.FC<AvatarGeneratorProps> = ({
   };
 
   return (
-    <div 
+    <div
       className={cn(
         "flex items-center justify-center rounded-full text-white font-bold",
         sizeClasses[size]

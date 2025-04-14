@@ -76,13 +76,13 @@ const AppShell = ({ children }: AppShellProps) => {
       {/* Desktop Sidebar */}
       <div className="hidden md:flex flex-col w-64 border-r border-border bg-card h-screen sticky top-0">
         <div className="p-4 border-b border-border">
-          <h1 className="text-xl font-bold text-purple-500 flex items-center">
+          <h1 className="text-xl font-bold text-purple-500 flex items-center hover:cursor-pointer" onClick={()=> navigate("/")}>
             <span className="text-2xl mr-2">🕶️</span> Undercover
           </h1>
         </div>
 
         <div className="p-4 flex-1">
-          <div className="flex items-center gap-3 bg-gray-800 rounded-lg p-3 mb-6 border border-purple-500/20">
+          <div onClick={()=> navigate("/profile")} className="flex items-center gap-3 bg-gray-800 rounded-lg p-3 mb-6 border border-purple-500/20 hover:cursor-pointer">
             <AvatarGenerator
               emoji={userIdentity.emoji}
               nickname={user?.anonymousAlias}
@@ -102,12 +102,11 @@ const AppShell = ({ children }: AppShellProps) => {
             <NavItem icon={<UserRound size={18} />} label="Profile" active={currentTab === "Profile"} onClick={() => navigate("/profile")} />
           </div>
 
-          <Button onClick={openWhisperModal} className="mt-6 w-full bg-purple-600 hover:bg-purple-700 text-white">
+          <button onClick={openWhisperModal} className="flex items-center justify-center p-2 rounded-lg mt-6 w-full border border-purple-600 hover:bg-purple-700 text-white">
             <MessageSquare size={16} className="mr-2" /> New Whisper
-          </Button>
+          </button>
         </div>
 
-        {/* Logout Button */}
         <div className="p-4">
           <Button onClick={handleLogout} className="w-full bg-red-500 hover:bg-red-700 text-white">
             <LogOut size={16} className="mr-2" />
@@ -129,7 +128,7 @@ const AppShell = ({ children }: AppShellProps) => {
           </div>
 
           <div className="p-4 flex-1">
-            <div className="flex items-center gap-3 bg-gray-800 rounded-lg p-3 mb-6 border border-purple-500/20">
+            <div onClick={()=> navigate("/profile")} className="flex items-center gap-3 bg-gray-800 rounded-lg p-3 mb-6 border border-purple-500/20 hover:cursor-pointer">
               <AvatarGenerator
                 emoji={userIdentity.emoji}
                 nickname={user?.anonymousAlias}
@@ -168,7 +167,7 @@ const AppShell = ({ children }: AppShellProps) => {
       <div className="flex-1 flex flex-col">
         {/* Mobile Top Bar */}
         <div className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border p-4 flex justify-between items-center">
-          <h1 className="text-lg font-bold text-purple-500 flex items-center">
+          <h1 className="text-lg font-bold text-purple-500 flex items-center" onClick={()=> navigate("/")}>
             <span className="text-xl mr-2">🕶️</span> Undercover
           </h1>
           <div className="flex items-center space-x-2">

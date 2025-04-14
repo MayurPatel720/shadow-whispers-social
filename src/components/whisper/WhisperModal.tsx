@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -40,12 +39,13 @@ const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
   };
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUsername(e.target.value);
-    setSelectedUser(null);
+    const value = e.target.value;
+    setUsername(value);
+    setSelectedUser(null); // Clear selected user when typing a new username
     
-    if (e.target.value.trim()) {
+    if (value.trim()) {
       setIsSearching(true);
-      debouncedSearch(e.target.value);
+      debouncedSearch(value);
     } else {
       setSearchResults([]);
       setIsSearching(false);
@@ -74,6 +74,7 @@ const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSearch = React.useCallback(
     debounce((query: string) => {
       performSearch(query);
@@ -93,9 +94,9 @@ const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
       setWordCount(0);
       setUsername("");
       setSelectedUser(null);
+      setSearchResults([]); // Clear search results on success
       onOpenChange(false);
       
-      // Navigate to whisper conversation
       if (data && data.receiver) {
         navigate("/whispers");
       }
@@ -128,7 +129,7 @@ const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
   const selectUser = (user) => {
     setSelectedUser(user);
     setUsername(user.anonymousAlias);
-    setSearchResults([]);
+    setSearchResults([]); // Clear search results immediately after selection
   };
 
   return (
@@ -171,8 +172,8 @@ const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
                 </Button>
               </div>
               
-              {searchResults.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full bg-background border border-undercover-purple/30 rounded-md shadow-md max-h-60 overflow-auto">
+              {searchResults.length > 0 && !selectedUser && (
+                <div className="absolute z-20 mt-1 w-full bg-background border border-undercover-purple/30 rounded-md shadow-md max-h-60 overflow-auto">
                   {searchResults.map(user => (
                     <div 
                       key={user._id} 
@@ -196,14 +197,14 @@ const WhisperModal: React.FC<WhisperModalProps> = ({ open, onOpenChange }) => {
               )}
               
               {isSearching && (
-                <div className="absolute z-10 mt-1 w-full text-center py-2 bg-background border border-undercover-purple/30 rounded-md shadow-md">
+                <div className="absolute z-20 mt-1 w-full text-center py-2 bg-background border border-undercover-purple/30 rounded-md shadow-md">
                   <Loader size={16} className="animate-spin inline mr-2" />
                   Searching...
                 </div>
               )}
               
-              {!isSearching && username && searchResults.length === 0 && (
-                <div className="absolute z-10 mt-1 w-full text-center py-2 bg-background border border-undercover-purple/30 rounded-md shadow-md">
+              {!isSearching && username && searchResults.length === 0 && !selectedUser && (
+                <div className="absolute z-20 mt-1 w-full text-center py-2 bg-background border border-undercover-purple/30 rounded-md shadow-md">
                   No users found
                 </div>
               )}
