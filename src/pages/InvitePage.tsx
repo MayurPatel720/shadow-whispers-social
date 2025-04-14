@@ -8,7 +8,7 @@ import { joinGhostCircle } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 
 const InvitePage = () => {
-  const { isLoggedIn, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
@@ -89,7 +89,7 @@ const InvitePage = () => {
           Join this anonymous community where you can share without revealing your identity.
         </p>
 
-        {isLoggedIn ? (
+        {isAuthenticated ? (
           <Button 
             onClick={handleJoinCircle} 
             className="bg-purple-600 hover:bg-purple-700 w-full"
