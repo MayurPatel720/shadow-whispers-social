@@ -3,175 +3,193 @@ import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader, Image as ImageIcon, X } from "lucide-react";
-import { createPost } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import { createPost } from "@/lib/api";
+import { Ghost, ImageIcon, Loader2, X } from "lucide-react";
 
 interface CreatePostModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
   ghostCircleId?: string;
 }
 
-const CreatePostModal: React.FC<CreatePostModalProps> = ({ 
-  isOpen, 
-  onClose, 
+const CreatePostModal: React.FC<CreatePostModalProps> = ({
+  open,
+  onOpenChange,
   onSuccess,
-  ghostCircleId 
+  ghostCircleId,
 }) => {
   const [content, setContent] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      toast({
-        variant: "destructive",
-        title: "Image too large",
-        description: "Please select an image under 5MB"
-      });
-      return;
-    }
-    
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-  
-  const clearImage = () => {
-    setImagePreview(null);
-    setImageFile(null);
-  };
 
-  const handleSubmit = async () => {
-    if (!content.trim() && !imageFile) return;
-  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content.trim() && !imageUrl) {
+      return toast({
+        title: "Content required",
+        description: "Please add some text or an image to your post.",
+        variant: "destructive",
+      });
+    }
+
     setIsSubmitting(true);
     try {
-      let imageUrl: string | null = null;
-  
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("file", imageFile); // ⬅️ use imageFile
-        formData.append("upload_preset", "undercover"); // ⬅️ your unsigned preset
-  
-        const res = await fetch("https://api.cloudinary.com/v1_1/ddtqri4py/image/upload", {
-          method: "POST",
-          body: formData,
-        });
-  
-        const data = await res.json();
-        imageUrl = data.secure_url;
-        console.log("Uploaded image URL:", imageUrl);
-      }
-  
       await createPost(content, ghostCircleId, imageUrl);
-  
       setContent("");
-      clearImage();
-      onSuccess();
+      setImageUrl("");
+      toast({
+        title: "Post created",
+        description: ghostCircleId 
+          ? "Your anonymous post has been shared to the ghost circle." 
+          : "Your anonymous post has been shared.",
+      });
+      onSuccess?.();
     } catch (error) {
       console.error("Error creating post:", error);
       toast({
+        title: "Failed to create post",
+        description: "Please try again later.",
         variant: "destructive",
-        title: "Error",
-        description: "Failed to create post. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-  
-  
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Only allow images under 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Image must be less than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    // Create FormData for image upload
+    const formData = new FormData();
+    formData.append("image", file);
+
+    // Simulate image upload (replace with actual upload logic)
+    setTimeout(() => {
+      // Mock URL for demo purposes - replace with actual upload logic
+      const mockImageUrl = URL.createObjectURL(file);
+      setImageUrl(mockImageUrl);
+      setIsUploading(false);
+    }, 1500);
+  };
+
+  const removeImage = () => {
+    setImageUrl("");
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] bg-gray-800 text-white border-purple-600">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-purple-300">Create New Post</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {ghostCircleId ? (
+              <>
+                <Ghost className="h-5 w-5 text-purple-500" />
+                Create Ghost Circle Post
+              </>
+            ) : (
+              "Create Anonymous Post"
+            )}
+          </DialogTitle>
+          <DialogDescription>
+            {ghostCircleId 
+              ? "Your post will only be visible to members of this ghost circle."
+              : "Share your thoughts anonymously with the world."
+            }
+          </DialogDescription>
         </DialogHeader>
-        
-        <div className="py-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <Textarea
-            placeholder="What's on your mind? Your identity will remain anonymous..."
-            className="min-h-[120px] bg-gray-700 border-gray-600 focus:border-purple-500"
+            placeholder="What's on your mind?"
             value={content}
             onChange={(e) => setContent(e.target.value)}
+            className="min-h-[120px]"
           />
-          
-          {imagePreview && (
-            <div className="relative mt-3 border border-gray-600 rounded-md overflow-hidden">
+
+          {imageUrl && (
+            <div className="relative">
+              <img
+                src={imageUrl}
+                alt="Post image"
+                className="rounded-md w-full max-h-[200px] object-cover"
+              />
               <Button
-                variant="destructive"
+                type="button"
+                variant="secondary"
                 size="icon"
-                className="absolute top-2 right-2 rounded-full opacity-90 hover:opacity-100 w-8 h-8"
-                onClick={clearImage}
+                className="absolute top-2 right-2 bg-black/70 hover:bg-black/90 text-white rounded-full p-1"
+                onClick={removeImage}
               >
-                <X size={16} />
+                <X className="h-4 w-4" />
               </Button>
-              <img src={imagePreview} alt="Upload preview" className="w-full h-auto max-h-[200px] object-contain" />
             </div>
           )}
-          
-          <div className="flex justify-between items-center mt-4">
+
+          <div className="flex justify-between items-center pt-2">
             <div>
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
-                className="text-purple-300 border-purple-700"
+                className="text-gray-500"
                 onClick={() => document.getElementById("image-upload")?.click()}
+                disabled={isUploading || isSubmitting}
               >
-                <ImageIcon size={16} className="mr-2" />
-                Add Image
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Uploading...
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="h-4 w-4 mr-2" /> Add Image
+                  </>
+                )}
               </Button>
               <input
                 type="file"
                 id="image-upload"
-                className="hidden"
                 accept="image/*"
+                className="hidden"
                 onChange={handleImageUpload}
+                disabled={isUploading || isSubmitting}
               />
             </div>
-            
-            <p className="text-xs text-gray-400">
-              Your post will be visible for 24 hours, and each like extends its life by 1 hour.
-            </p>
+            <Button
+              type="submit"
+              disabled={isSubmitting || isUploading || (!content.trim() && !imageUrl)}
+              className={ghostCircleId ? "bg-purple-600 hover:bg-purple-700" : ""}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Posting...
+                </>
+              ) : (
+                "Post"
+              )}
+            </Button>
           </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting} className="border-gray-600">
-            Cancel
-          </Button>
-          <Button 
-            className="bg-purple-600 hover:bg-purple-700" 
-            onClick={handleSubmit}
-            disabled={(!content.trim() && !imageFile) || isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader size={16} className="mr-2 animate-spin" />
-                Posting...
-              </>
-            ) : (
-              "Post Anonymously"
-            )}
-          </Button>
-        </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

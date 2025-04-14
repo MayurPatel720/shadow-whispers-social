@@ -86,8 +86,13 @@ export const getMyGhostCircles = async () => {
   return response.data;
 };
 
-export const inviteToGhostCircle = async (circleId: string, username: string) => {
-  const response = await api.post(`/api/ghost-circles/${circleId}/invite`, { username });
+export const inviteToGhostCircle = async (circleId: string, friendUsername: string) => {
+  const response = await api.post(`/api/ghost-circles/${circleId}/invite`, { friendUsername });
+  return response.data;
+};
+
+export const getGhostCirclePosts = async (circleId: string) => {
+  const response = await api.get(`/api/posts/circle/${circleId}`);
   return response.data;
 };
 

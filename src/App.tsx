@@ -12,6 +12,7 @@ import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import WhispersPage from "./pages/WhispersPage";
 import ProfilePage from "./pages/ProfilePage";
+import GhostCircles from "./pages/GhostCircles";
 import AppShell from "./components/layout/AppShell";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,16 @@ const App = () => (
                 <ProtectedRoute>
                   <AppShell>
                     <ProfilePage />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ghost-circles"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <GhostCircles />
                   </AppShell>
                 </ProtectedRoute>
               }

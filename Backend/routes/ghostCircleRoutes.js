@@ -5,6 +5,7 @@ const {
   createGhostCircle,
   getMyGhostCircles,
   inviteToGhostCircle,
+  getGhostCircleById,
 } = require('../controllers/ghostCircleController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -12,6 +13,9 @@ const { protect } = require('../middleware/authMiddleware');
 router.route('/')
   .post(protect, createGhostCircle)
   .get(protect, getMyGhostCircles);
+
+router.route('/:id')
+  .get(protect, getGhostCircleById);
 
 router.route('/:id/invite')
   .post(protect, inviteToGhostCircle);

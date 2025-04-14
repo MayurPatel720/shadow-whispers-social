@@ -101,8 +101,33 @@ const inviteToGhostCircle = asyncHandler(async (req, res) => {
   res.status(200).json({ message: 'User invited to ghost circle successfully' });
 });
 
+// @desc    Get a specific ghost circle by ID
+// @route   GET /api/ghost-circles/:id
+// @access  Private
+const getGhostCircleById = asyncHandler(async (req, res) => {
+  const ghostCircle = await GhostCircle.findById(req.params.id);
+  
+  if (!ghostCircle) {
+    res.status(404);
+    throw new Error('Ghost circle not found');
+  }
+  
+  // Check if user is a member
+  const isMember = ghostCircle.members.some(member => 
+    member.userId.toString() === req.user._id.toString()
+  );
+  
+  if (!isMember) {
+    res.status(403);
+    throw new Error('Not authorized to view this ghost circle');
+  }
+  
+  res.json(ghostCircle);
+});
+
 module.exports = {
   createGhostCircle,
   getMyGhostCircles,
   inviteToGhostCircle,
+  getGhostCircleById,
 };

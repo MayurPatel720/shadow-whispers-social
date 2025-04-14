@@ -3,6 +3,7 @@ const asyncHandler = require('express-async-handler');
 const Post = require('../models/postModel');
 const User = require('../models/userModel');
 const GhostCircle = require('../models/ghostCircleModel');
+const mongoose = require('mongoose');
 
 // @desc    Create a new post (global or in ghost circle)
 // @route   POST /api/posts
