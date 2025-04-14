@@ -93,7 +93,7 @@ const GlobalFeed = () => {
 
       <CreatePostModal 
         open={isCreatePostOpen} 
-        onClose={() => setIsCreatePostOpen(false)}
+        onOpenChange={setIsCreatePostOpen}
         onSuccess={handlePostCreated}
       />
     </div>
