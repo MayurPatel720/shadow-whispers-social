@@ -1,12 +1,15 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { loginUser, registerUser as registerUserService } from '@/lib/api';
+import { loginUser, registerUser as registerUserService, updateUserProfile } from '@/lib/api';
 
 interface AuthContextType {
   user: any;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, username: string, fullName: string, referralCode?: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (userData: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,6 +25,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -31,9 +35,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(JSON.parse(storedUser));
       setIsAuthenticated(true);
     }
+    
+    // Set loading to false after checking authentication
+    setIsLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
+    setIsLoading(true);
     try {
       const userData = await loginUser(email, password);
 
@@ -46,10 +54,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Login error:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
   
   const register = async (email: string, password: string, username: string, fullName: string, referralCode?: string) => {
+    setIsLoading(true);
     try {
       const userData = await registerUserService(username, fullName, email, password, referralCode);
       
@@ -62,6 +73,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateProfile = async (userData: any) => {
+    setIsLoading(true);
+    try {
+      const updatedUser = await updateUserProfile(userData);
+      
+      // Update local storage with new user data
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const mergedUser = { ...currentUser, ...updatedUser };
+      
+      localStorage.setItem('user', JSON.stringify(mergedUser));
+      setUser(mergedUser);
+      
+      return updatedUser;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -75,9 +109,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     isAuthenticated,
+    isLoading,
     login,
     register,
     logout,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
