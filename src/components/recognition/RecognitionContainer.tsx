@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getRecognitionStats } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
@@ -33,8 +33,14 @@ const RecognitionContainer: React.FC = () => {
     if (!statsData) return [];
 
     const allCompliments = [];
-    for (const recognizer of statsData.recognizedUsers || []) {
-      if (recognizer.compliments && recognizer.compliments.length > 0) {
+    
+    // Ensure recognizedUsers is an array before attempting to iterate
+    const recognizers = Array.isArray(statsData.recognizedUsers) 
+      ? statsData.recognizedUsers 
+      : [];
+      
+    for (const recognizer of recognizers) {
+      if (recognizer.compliments && Array.isArray(recognizer.compliments) && recognizer.compliments.length > 0) {
         allCompliments.push(...recognizer.compliments);
       }
     }
@@ -46,6 +52,15 @@ const RecognitionContainer: React.FC = () => {
   };
 
   const allCompliments = statsData ? extractCompliments() : [];
+
+  // Ensure arrays are valid before passing them to components
+  const recognizedUsers = statsData && Array.isArray(statsData.recognizedUsers) 
+    ? statsData.recognizedUsers 
+    : [];
+    
+  const recognizedByUsers = statsData && Array.isArray(statsData.identityRecognizers)
+    ? statsData.identityRecognizers
+    : [];
 
   return (
     <div className="space-y-6">
@@ -64,8 +79,8 @@ const RecognitionContainer: React.FC = () => {
       {/* Recognition Tabs */}
       <div>
         <RecognitionTabs
-          recognizedUsers={statsData?.recognizedUsers || []}
-          recognizedByUsers={statsData?.identityRecognizers || []}
+          recognizedUsers={recognizedUsers}
+          recognizedByUsers={recognizedByUsers}
           isLoading={isLoading}
           onRecognitionUpdate={refetch}
           filter={filter}

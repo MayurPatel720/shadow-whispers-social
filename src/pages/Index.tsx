@@ -1,10 +1,8 @@
+
 import GlobalFeed from "@/components/feed/GlobalFeed";
 
 const Index = () => {
-  return (
-      <GlobalFeed />
-    
-  );
+  return <GlobalFeed />;
 };
 
 export default Index;
