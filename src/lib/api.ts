@@ -47,11 +47,24 @@ export const loginUser = async (email: string, password: string) => {
   return response.data;
 };
 
-export const registerUser = async (username: string, fullName: string, email: string, password: string) => {
+export const registerUser = async (username: string, fullName: string, email: string, password: string, referralCode?: string) => {
   try {
     console.log('Attempting to register user with:', { username, fullName, email });
     const response = await api.post('/api/users/register', { username, fullName, email, password });
     console.log('Registration response:', response.data);
+    
+    // Apply referral code if provided
+    if (referralCode && response.data._id) {
+      try {
+        await api.post('/api/referrals/apply', { 
+          code: referralCode,
+          userId: response.data._id
+        });
+      } catch (refError) {
+        console.error('Error applying referral code:', refError);
+      }
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Registration error:', error.response || error);
@@ -83,6 +96,41 @@ export const searchUsers = async (query: string) => {
     return response.data;
   } catch (error) {
     console.error('Error searching users:', error);
+    throw error;
+  }
+};
+
+// Referral API calls
+export const getReferralInfo = async () => {
+  try {
+    const response = await api.get('/api/referrals/info');
+    return response.data;
+  } catch (error) {
+    console.error('Error getting referral info:', error);
+    throw error;
+  }
+};
+
+export const applyReferralCode = async (code: string, userId: string) => {
+  try {
+    const response = await api.post('/api/referrals/apply', { code, userId });
+    return response.data;
+  } catch (error) {
+    console.error('Error applying referral code:', error);
+    throw error;
+  }
+};
+
+export const claimReferralReward = async (rewardIndex: number, paymentMethod: string, paymentEmail: string) => {
+  try {
+    const response = await api.post('/api/referrals/claim-reward', {
+      rewardIndex,
+      paymentMethod,
+      paymentEmail
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error claiming reward:', error);
     throw error;
   }
 };

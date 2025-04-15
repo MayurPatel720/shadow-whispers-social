@@ -89,6 +89,41 @@ const userSchema = mongoose.Schema(
         },
       },
     ],
+    referralCode: {
+      type: String,
+      unique: true,
+    },
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    referralCount: {
+      type: Number,
+      default: 0,
+    },
+    referralRewards: [
+      {
+        type: {
+          type: String,
+          enum: ['badge', 'cash', 'premium'],
+        },
+        name: {
+          type: String,
+        },
+        claimed: {
+          type: Boolean,
+          default: false,
+        },
+        claimedAt: {
+          type: Date,
+        },
+        paymentInfo: {
+          method: String,
+          email: String,
+          status: String,
+        },
+      },
+    ],
   },
   {
     timestamps: true,
@@ -103,6 +138,11 @@ userSchema.pre('save', async function (next) {
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  
+  // Generate referral code if it doesn't exist
+  if (!this.referralCode) {
+    this.referralCode = this._generateReferralCode();
+  }
 });
 
 // Match user entered password to hashed password in database
@@ -127,6 +167,19 @@ userSchema.methods.generateAnonymousAlias = function () {
   
   this.anonymousAlias = `${randomAdjective}${randomNoun}`;
   return this.anonymousAlias;
+};
+
+// Generate unique referral code
+userSchema.methods._generateReferralCode = function() {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  
+  // Generate a 7 character code
+  for (let i = 0; i < 7; i++) {
+    code += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  
+  return code;
 };
 
 module.exports = mongoose.model('User', userSchema);

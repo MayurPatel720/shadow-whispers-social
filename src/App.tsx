@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound";
 import WhispersPage from "./pages/WhispersPage";
 import ProfilePage from "./pages/ProfilePage";
 import GhostCircles from "./pages/GhostCircles";
+import ReferralPage from "./pages/ReferralPage";
 import AppShell from "./components/layout/AppShell";
 import InvitePage from "./pages/InvitePage";
 
@@ -67,6 +68,16 @@ const App = () => (
                 <ProtectedRoute>
                   <AppShell>
                     <GhostCircles />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/referrals"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <ReferralPage />
                   </AppShell>
                 </ProtectedRoute>
               }
