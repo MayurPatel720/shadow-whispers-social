@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Dialog,
@@ -89,7 +90,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
         setIsUploading(false);
       }
 
-      await createPost(content, ghostCircleId, uploadedImageUrl);
+      await createPost(content, ghostCircleId, uploadedImageUrl || undefined);
       setContent("");
       removeImage();
 

@@ -1,5 +1,6 @@
+
 import axios from "axios";
-import { PostType } from "@/types";
+import { PostType, CommentType, UserType, GhostCircleType, WhisperType } from "@/types";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -24,6 +25,40 @@ const handleApiError = (error: any) => {
   }
 };
 
+// Authentication
+export const loginUser = async (email: string, password: string): Promise<UserType> => {
+  try {
+    const { data } = await api.post("/api/users/login", { email, password });
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+export const registerUser = async (
+  username: string,
+  fullName: string,
+  email: string,
+  password: string,
+  referralCode?: string
+): Promise<UserType> => {
+  try {
+    const { data } = await api.post("/api/users/register", {
+      username,
+      fullName,
+      email,
+      password,
+      referralCode,
+    });
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+// Posts
 export const uploadImage = async (image: File) => {
   const formData = new FormData();
   formData.append("image", image);
@@ -41,12 +76,9 @@ export const uploadImage = async (image: File) => {
   }
 };
 
-export const createPost = async (postData: {
-  imageUrl: string;
-  caption: string;
-}) => {
+export const createPost = async (content: string, ghostCircleId?: string, imageUrl?: string) => {
   try {
-    const { data } = await api.post("/api/posts", postData);
+    const { data } = await api.post("/api/posts", { content, ghostCircleId, imageUrl });
     return data;
   } catch (error) {
     handleApiError(error);
@@ -57,6 +89,16 @@ export const createPost = async (postData: {
 export const getPosts = async (page = 1, limit = 10) => {
   try {
     const { data } = await api.get(`/api/posts?page=${page}&limit=${limit}`);
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+export const getGlobalFeed = async () => {
+  try {
+    const { data } = await api.get("/api/posts/global");
     return data;
   } catch (error) {
     handleApiError(error);
@@ -76,10 +118,11 @@ export const getPostById = async (postId: string) => {
 
 export const updatePost = async (
   postId: string,
-  updates: { caption?: string }
+  content: string,
+  imageUrl?: string
 ) => {
   try {
-    const { data } = await api.put(`/api/posts/${postId}`, updates);
+    const { data } = await api.put(`/api/posts/${postId}`, { content, imageUrl });
     return data;
   } catch (error) {
     handleApiError(error);
@@ -117,9 +160,30 @@ export const unlikePost = async (postId: string) => {
   }
 };
 
-export const addComment = async (postId: string, text: string) => {
+// Comments
+export const addComment = async (postId: string, text: string, anonymousAlias?: string) => {
   try {
-    const { data } = await api.post(`/api/posts/${postId}/comments`, { text });
+    const { data } = await api.post(`/api/posts/${postId}/comments`, { text, anonymousAlias });
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+export const getComments = async (postId: string) => {
+  try {
+    const { data } = await api.get(`/api/posts/${postId}/comments`);
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+export const editComment = async (postId: string, commentId: string, text: string) => {
+  try {
+    const { data } = await api.put(`/api/posts/${postId}/comments/${commentId}`, { text });
     return data;
   } catch (error) {
     handleApiError(error);
@@ -139,6 +203,20 @@ export const deleteComment = async (postId: string, commentId: string) => {
   }
 };
 
+export const replyToComment = async (postId: string, commentId: string, content: string, anonymousAlias?: string) => {
+  try {
+    const { data } = await api.post(`/api/posts/${postId}/comments/${commentId}/replies`, {
+      content,
+      anonymousAlias
+    });
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+// User Profile
 export const getUserProfile = async () => {
   try {
     const { data } = await api.get("/api/users/profile");
@@ -174,6 +252,68 @@ export const getUserPosts = async (userId: string) => {
   }
 };
 
+// Ghost Circles
+export const getMyGhostCircles = async () => {
+  try {
+    const { data } = await api.get("/api/ghost-circles");
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+export const createGhostCircle = async (name: string, description: string) => {
+  try {
+    const { data } = await api.post("/api/ghost-circles", { name, description });
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+export const getGhostCircleById = async (circleId: string) => {
+  try {
+    const { data } = await api.get(`/api/ghost-circles/${circleId}`);
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+export const getGhostCirclePosts = async (circleId: string) => {
+  try {
+    const { data } = await api.get(`/api/ghost-circles/${circleId}/posts`);
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+export const inviteToGhostCircle = async (circleId: string, username: string) => {
+  try {
+    const { data } = await api.post(`/api/ghost-circles/${circleId}/invite`, { username });
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+export const joinGhostCircle = async (circleId: string) => {
+  try {
+    const { data } = await api.post(`/api/ghost-circles/${circleId}/join`);
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+// Whispers
 export const getMyWhispers = async () => {
   try {
     const { data } = await api.get("/api/whispers");
@@ -204,6 +344,28 @@ export const sendWhisper = async (receiverId: string, content: string) => {
   }
 };
 
+export const deleteWhisperMessage = async (messageId: string) => {
+  try {
+    const { data } = await api.delete(`/api/whispers/${messageId}`);
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+// User Search
+export const searchUsers = async (query: string) => {
+  try {
+    const { data } = await api.get(`/api/users/search?q=${query}`);
+    return data;
+  } catch (error) {
+    handleApiError(error);
+    throw error;
+  }
+};
+
+// Recognition
 export const recognizeUser = async (targetUserId: string) => {
   try {
     const { data } = await api.post("/api/users/recognize", { targetUserId });
@@ -254,6 +416,7 @@ export const challengeUser = async (targetUserId: string) => {
   }
 };
 
+// Referrals
 export const getReferralInfo = async () => {
   try {
     const { data } = await api.get("/api/referrals/info");
@@ -267,16 +430,6 @@ export const getReferralInfo = async () => {
 export const claimReferralReward = async (rewardId: string) => {
   try {
     const { data } = await api.post(`/api/referrals/claim/${rewardId}`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const deleteWhisperMessage = async (messageId: string) => {
-  try {
-    const { data } = await api.delete(`/api/whispers/${messageId}`);
     return data;
   } catch (error) {
     handleApiError(error);

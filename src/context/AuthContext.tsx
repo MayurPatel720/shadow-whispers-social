@@ -1,9 +1,10 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { loginUser, registerUser as registerUserService, updateUserProfile } from '@/lib/api';
+import { UserType } from '@/types';
 
 interface AuthContextType {
-  user: any;
+  user: UserType | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;

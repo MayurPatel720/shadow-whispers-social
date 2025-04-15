@@ -41,7 +41,7 @@ const ClaimRewardModal: React.FC<ClaimRewardModalProps> = ({
     
     setIsSubmitting(true);
     try {
-      await claimReferralReward(rewardIndex, paymentMethod, paymentEmail);
+      await claimReferralReward(rewardIndex.toString());
       toast({
         title: "Reward claim submitted!",
         description: "We'll process your payment soon.",

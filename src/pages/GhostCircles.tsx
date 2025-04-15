@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import CreateGhostCircleModal from "@/components/ghost-circle/CreateGhostCircleModal";
 import GhostCircleCard from "@/components/ghost-circle/GhostCircleCard";
 import CircleFeedView from "@/components/ghost-circle/CircleFeedView";
+import { GhostCircleType } from "@/types";
 
 const GhostCircles = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -107,7 +108,7 @@ const GhostCircles = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {ghostCircles.map((circle) => (
+            {ghostCircles.map((circle: GhostCircleType) => (
               <GhostCircleCard 
                 key={circle._id} 
                 circle={circle} 

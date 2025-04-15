@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import PostCard from "@/components/feed/PostCard";
 import CreatePostModal from "@/components/feed/CreatePostModal"; 
 import { getGhostCirclePosts, getGhostCircleById } from "@/lib/api";
+import { PostType, GhostCircleType } from "@/types";
 
 interface CircleFeedViewProps {
   circleId: string;

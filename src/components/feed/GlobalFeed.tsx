@@ -10,6 +10,7 @@ import { Loader, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CreatePostModal from "@/components/feed/CreatePostModal";
 import { toast } from "@/hooks/use-toast";
+import { PostType } from "@/types";
 
 const GlobalFeed = () => {
   const { user } = useAuth();
@@ -78,7 +79,7 @@ const GlobalFeed = () => {
       
       {posts && posts.length > 0 ? (
         <div className="space-y-4">
-          {posts.map((post: any) => (
+          {posts.map((post: PostType) => (
             <PostCard 
               key={post._id} 
               post={post} 
