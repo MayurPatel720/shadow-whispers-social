@@ -32,7 +32,7 @@ type FormValues = z.infer<typeof formSchema>;
 const Register = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -57,6 +57,13 @@ const Register = () => {
       form.setValue('referralCode', referralCodeFromURL);
     }
   }, [referralCodeFromURL, form]);
+  
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
@@ -67,7 +74,7 @@ const Register = () => {
         title: 'Registration successful!',
         description: 'Your account has been created and you are now logged in.',
       });
-      navigate('/');
+      // Navigation will happen in the useEffect
     } catch (error) {
       console.error('Registration error:', error);
       toast({
@@ -81,11 +88,11 @@ const Register = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-4">
+      <Card className="w-full max-w-md shadow-lg border-purple-700/50 bg-black/40 backdrop-blur-md text-gray-100">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-          <CardDescription>Enter your information to get started</CardDescription>
+          <CardTitle className="text-2xl font-bold text-purple-400">Create an account</CardTitle>
+          <CardDescription className="text-gray-400">Enter your information to get started</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -95,11 +102,11 @@ const Register = () => {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel className="text-purple-300">Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="username" {...field} />
+                      <Input placeholder="username" className="bg-gray-900/60 border-purple-800/50" {...field} />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-400" />
                   </FormItem>
                 )}
               />
@@ -108,11 +115,11 @@ const Register = () => {
                 name="fullName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel className="text-purple-300">Full Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="John Doe" {...field} />
+                      <Input placeholder="John Doe" className="bg-gray-900/60 border-purple-800/50" {...field} />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-400" />
                   </FormItem>
                 )}
               />
@@ -121,11 +128,11 @@ const Register = () => {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-purple-300">Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="your@email.com" {...field} />
+                      <Input type="email" placeholder="your@email.com" className="bg-gray-900/60 border-purple-800/50" {...field} />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-400" />
                   </FormItem>
                 )}
               />
@@ -134,26 +141,27 @@ const Register = () => {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-purple-300">Password</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
                           type={showPassword ? 'text' : 'password'}
                           placeholder="••••••••"
+                          className="bg-gray-900/60 border-purple-800/50"
                           {...field}
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="absolute right-0 top-0 h-full px-3"
+                          className="absolute right-0 top-0 h-full px-3 text-purple-400"
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </Button>
                       </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-400" />
                   </FormItem>
                 )}
               />
@@ -162,17 +170,17 @@ const Register = () => {
                 name="referralCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Referral Code (Optional)</FormLabel>
+                    <FormLabel className="text-purple-300">Referral Code (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter referral code" {...field} />
+                      <Input placeholder="Enter referral code" className="bg-gray-900/60 border-purple-800/50" {...field} />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-400" />
                   </FormItem>
                 )}
               />
               <Button
                 type="submit"
-                className="w-full bg-undercover-purple hover:bg-undercover-deep-purple"
+                className="w-full bg-purple-600 hover:bg-purple-700 py-5 text-lg font-medium"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Creating Account...' : 'Create Account'}
@@ -181,9 +189,9 @@ const Register = () => {
           </Form>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-400">
             Already have an account?{' '}
-            <Link to="/login" className="text-undercover-light-purple hover:underline">
+            <Link to="/login" className="text-purple-400 hover:text-purple-300 hover:underline">
               Log in
             </Link>
           </p>

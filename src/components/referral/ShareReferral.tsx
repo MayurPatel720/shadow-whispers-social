@@ -13,10 +13,23 @@ interface ShareReferralProps {
 const ShareReferral: React.FC<ShareReferralProps> = ({ referralCode }) => {
   const [copied, setCopied] = useState(false);
   
-  const shareUrl = `${window.location.origin}/invite?code=${referralCode}`;
-  const shareMessage = `Unmask the fun—join me on Undercover with code ${referralCode}`;
+  // Make sure we have a valid referral code with a fallback
+  const validCode = referralCode && referralCode !== 'LOADING' ? referralCode : '';
+  
+  // Create a proper invitation URL with the referral code
+  const shareUrl = `${window.location.origin}/invite?code=${validCode}`;
+  const shareMessage = `Unmask the fun—join me on Undercover with code ${validCode}`;
   
   const copyToClipboard = () => {
+    if (!validCode) {
+      toast({
+        title: "No referral code available",
+        description: "Please wait for your referral code to be generated",
+        variant: "destructive"
+      });
+      return;
+    }
+
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     toast({
@@ -27,16 +40,19 @@ const ShareReferral: React.FC<ShareReferralProps> = ({ referralCode }) => {
   };
   
   const shareOnTwitter = () => {
+    if (!validCode) return;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(shareUrl)}`;
     window.open(twitterUrl, '_blank');
   };
   
   const shareOnFacebook = () => {
+    if (!validCode) return;
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareMessage)}`;
     window.open(facebookUrl, '_blank');
   };
   
   const shareOnWhatsapp = () => {
+    if (!validCode) return;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${shareMessage} ${shareUrl}`)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -55,11 +71,11 @@ const ShareReferral: React.FC<ShareReferralProps> = ({ referralCode }) => {
           <label className="text-sm font-medium">Your unique invitation code</label>
           <div className="flex gap-2">
             <Input 
-              value={referralCode} 
+              value={validCode || "Loading your code..."}
               className="font-mono text-lg text-center tracking-wide" 
               readOnly 
             />
-            <Button variant="outline" onClick={copyToClipboard}>
+            <Button variant="outline" onClick={copyToClipboard} disabled={!validCode}>
               <Copy size={16} />
             </Button>
           </div>
@@ -69,11 +85,11 @@ const ShareReferral: React.FC<ShareReferralProps> = ({ referralCode }) => {
           <label className="text-sm font-medium">Invitation link</label>
           <div className="flex gap-2">
             <Input 
-              value={shareUrl}
+              value={validCode ? shareUrl : "Loading your invitation link..."}
               className="text-sm" 
               readOnly 
             />
-            <Button variant="outline" onClick={copyToClipboard}>
+            <Button variant="outline" onClick={copyToClipboard} disabled={!validCode}>
               {copied ? "Copied!" : "Copy"}
             </Button>
           </div>
@@ -82,13 +98,13 @@ const ShareReferral: React.FC<ShareReferralProps> = ({ referralCode }) => {
         <div>
           <label className="text-sm font-medium block mb-2">Share on social media</label>
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={shareOnTwitter}>
+            <Button variant="outline" className="flex-1" onClick={shareOnTwitter} disabled={!validCode}>
               <Twitter size={16} className="mr-2" /> Twitter
             </Button>
-            <Button variant="outline" className="flex-1" onClick={shareOnFacebook}>
+            <Button variant="outline" className="flex-1" onClick={shareOnFacebook} disabled={!validCode}>
               <Facebook size={16} className="mr-2" /> Facebook
             </Button>
-            <Button variant="outline" className="flex-1" onClick={shareOnWhatsapp}>
+            <Button variant="outline" className="flex-1" onClick={shareOnWhatsapp} disabled={!validCode}>
               <MessageCircle size={16} className="mr-2" /> WhatsApp
             </Button>
           </div>

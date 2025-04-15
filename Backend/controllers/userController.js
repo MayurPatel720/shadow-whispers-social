@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
 const { generateToken } = require('../utils/jwtHelper');
 const postModel = require('../models/postModel');
+const Referral = require('../models/referralModel');
 
 // @desc    Register a new user
 // @route   POST /api/users/register
@@ -25,10 +26,8 @@ const getOwnPosts = asyncHandler(async (req, res) => {
   res.status(200).json(posts);
 });
 
-
-
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, fullName, email, password } = req.body;
+  const { username, fullName, email, password, referralCode } = req.body;
 
   // Check if user exists
   const userExists = await User.findOne({ $or: [{ email }, { username }] });
@@ -46,8 +45,66 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
   });
 
-  // Generate anonymous alias
+  // Generate anonymous alias and referral code
   const anonymousAlias = user.generateAnonymousAlias();
+  
+  // Check if a referral code was provided
+  if (referralCode) {
+    // Find referrer by the provided code
+    const referrer = await User.findOne({ referralCode });
+    
+    if (referrer) {
+      // Set referred by
+      user.referredBy = referrer._id;
+      
+      // Create referral record
+      await Referral.create({
+        referrer: referrer._id,
+        referred: user._id,
+        code: referralCode,
+        status: 'pending'
+      });
+      
+      // Update referrer count
+      referrer.referralCount += 1;
+      
+      // Check for reward milestones and grant if needed
+      const currentCount = referrer.referralCount;
+      
+      // Check for tier 1: 5 referrals = badge
+      if (currentCount >= 5 && !referrer.referralRewards.some(r => r.type === 'badge')) {
+        referrer.referralRewards.push({
+          type: 'badge',
+          name: 'Shadow Recruiter',
+          claimed: true,
+          claimedAt: Date.now()
+        });
+      }
+      
+      // Check for tier 2: 10 referrals = $100 cash
+      if (currentCount >= 10 && !referrer.referralRewards.some(r => r.type === 'cash')) {
+        referrer.referralRewards.push({
+          type: 'cash',
+          name: '$100 Cash Reward',
+          claimed: false
+        });
+      }
+      
+      // Check for tier 3: 20 referrals = premium features
+      if (currentCount >= 20 && !referrer.referralRewards.some(r => r.type === 'premium')) {
+        referrer.referralRewards.push({
+          type: 'premium',
+          name: 'Premium Features',
+          claimed: true,
+          claimedAt: Date.now()
+        });
+      }
+      
+      await referrer.save();
+    }
+  }
+  
+  // Save the user with all the updates
   await user.save();
 
   if (user) {
@@ -58,6 +115,7 @@ const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       anonymousAlias: user.anonymousAlias,
       avatarEmoji: user.avatarEmoji,
+      referralCode: user.referralCode,
       token: generateToken(user._id),
     });
   } else {
@@ -83,6 +141,7 @@ const loginUser = asyncHandler(async (req, res) => {
       email: user.email,
       anonymousAlias: user.anonymousAlias,
       avatarEmoji: user.avatarEmoji,
+      referralCode: user.referralCode,
       token: generateToken(user._id),
     });
   } else {

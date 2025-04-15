@@ -1,3 +1,4 @@
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import axios from 'axios';
@@ -13,6 +14,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true, // Ensure credentials (like cookies) are included
+  timeout: 10000, // Add timeout to prevent long-running requests
 });
 
 // Add a request interceptor to include JWT token in requests
@@ -34,8 +36,12 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Handle token expiration or unauthorized errors
       console.log('Unauthorized, handling token refresh or re-login...');
-      // Implement token refresh logic here if you have refresh tokens
-      // Alternatively, trigger a logout action
+      // If not a login/register request, clear token and redirect to login
+      if (!error.config.url.includes('login') && !error.config.url.includes('register')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -43,27 +49,34 @@ api.interceptors.response.use(
 
 // Auth API calls
 export const loginUser = async (email: string, password: string) => {
-  const response = await api.post('/api/users/login', { email, password });
-  return response.data;
+  try {
+    const response = await api.post('/api/users/login', { email, password });
+    return response.data;
+  } catch (error) {
+    console.error('Login error:', error);
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Login failed. Please check your credentials and try again.');
+    }
+  }
 };
 
 export const registerUser = async (username: string, fullName: string, email: string, password: string, referralCode?: string) => {
   try {
     console.log('Attempting to register user with:', { username, fullName, email });
-    const response = await api.post('/api/users/register', { username, fullName, email, password });
-    console.log('Registration response:', response.data);
     
-    // Apply referral code if provided
-    if (referralCode && response.data._id) {
-      try {
-        await api.post('/api/referrals/apply', { 
-          code: referralCode,
-          userId: response.data._id
-        });
-      } catch (refError) {
-        console.error('Error applying referral code:', refError);
-      }
-    }
+    // Include referralCode in the registration payload if provided
+    const payload = { 
+      username, 
+      fullName, 
+      email, 
+      password,
+      ...(referralCode ? { referralCode } : {})
+    };
+    
+    const response = await api.post('/api/users/register', payload);
+    console.log('Registration response:', response.data);
     
     return response.data;
   } catch (error) {
