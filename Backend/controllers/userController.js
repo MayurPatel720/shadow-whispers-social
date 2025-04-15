@@ -245,11 +245,343 @@ const addFriend = asyncHandler(async (req, res) => {
   res.status(200).json({ message: 'Friend added successfully' });
 });
 
+// @desc    Recognize a user by username
+// @route   POST /api/users/recognize
+// @access  Private
+const recognizeUser = asyncHandler(async (req, res) => {
+  const { targetUsername } = req.body;
+  
+  // Find the target user
+  const targetUser = await User.findOne({ username: targetUsername });
+  
+  if (!targetUser) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  
+  // Don't allow self-recognition
+  if (targetUser._id.toString() === req.user._id.toString()) {
+    res.status(400);
+    throw new Error('You cannot recognize yourself');
+  }
+  
+  // Check if already recognized
+  const currentUser = await User.findById(req.user._id);
+  const alreadyRecognized = currentUser.recognizedUsers.some(
+    rec => rec.userId.toString() === targetUser._id.toString()
+  );
+  
+  if (alreadyRecognized) {
+    res.status(400);
+    throw new Error('You have already recognized this user');
+  }
+  
+  // Update recognition stats
+  currentUser.recognitionStats.totalGuesses += 1;
+  currentUser.recognitionStats.correctGuesses += 1;
+  currentUser.recognitionStats.successRate = 
+    (currentUser.recognitionStats.correctGuesses / currentUser.recognitionStats.totalGuesses) * 100;
+  
+  // Add to recognizedUsers
+  currentUser.recognizedUsers.push({
+    userId: targetUser._id,
+    recognizedAt: Date.now()
+  });
+  
+  await currentUser.save();
+  
+  // Add to the target's identityRecognizers
+  targetUser.identityRecognizers.push({
+    userId: currentUser._id,
+    recognizedAt: Date.now()
+  });
+  
+  // Update shadow reputation
+  updateShadowReputation(targetUser);
+  
+  await targetUser.save();
+  
+  res.status(200).json({
+    message: 'User recognized successfully',
+    recognizedUser: {
+      _id: targetUser._id,
+      username: targetUser.username,
+      anonymousAlias: targetUser.anonymousAlias,
+      avatarEmoji: targetUser.avatarEmoji,
+    }
+  });
+});
+
+// @desc    Leave a compliment for a recognized user
+// @route   POST /api/users/compliment
+// @access  Private
+const leaveCompliment = asyncHandler(async (req, res) => {
+  const { targetUserId, complimentText } = req.body;
+  
+  // Validate compliment
+  if (!complimentText || complimentText.trim() === '') {
+    res.status(400);
+    throw new Error('Compliment text is required');
+  }
+  
+  // Find the current user
+  const currentUser = await User.findById(req.user._id);
+  
+  // Check if user has recognized the target
+  const recognitionIndex = currentUser.recognizedUsers.findIndex(
+    rec => rec.userId.toString() === targetUserId
+  );
+  
+  if (recognitionIndex === -1) {
+    res.status(400);
+    throw new Error('You must recognize a user before leaving a compliment');
+  }
+  
+  // Add compliment to recognizedUsers
+  currentUser.recognizedUsers[recognitionIndex].compliments.push({
+    text: complimentText,
+    createdAt: Date.now()
+  });
+  
+  await currentUser.save();
+  
+  // Add compliment to the target's identityRecognizers
+  const targetUser = await User.findById(targetUserId);
+  
+  if (!targetUser) {
+    res.status(404);
+    throw new Error('Target user not found');
+  }
+  
+  const targetRecIndex = targetUser.identityRecognizers.findIndex(
+    rec => rec.userId.toString() === req.user._id.toString()
+  );
+  
+  if (targetRecIndex !== -1) {
+    targetUser.identityRecognizers[targetRecIndex].compliments.push({
+      text: complimentText,
+      createdAt: Date.now()
+    });
+    
+    await targetUser.save();
+  }
+  
+  res.status(200).json({
+    message: 'Compliment added successfully'
+  });
+});
+
+// @desc    Revoke recognition of a user
+// @route   POST /api/users/revoke-recognition
+// @access  Private
+const revokeRecognition = asyncHandler(async (req, res) => {
+  const { targetUserId } = req.body;
+  
+  // Find the current user
+  const currentUser = await User.findById(req.user._id);
+  
+  // Check if user has recognized the target
+  const recognitionIndex = currentUser.recognizedUsers.findIndex(
+    rec => rec.userId.toString() === targetUserId
+  );
+  
+  if (recognitionIndex === -1) {
+    res.status(400);
+    throw new Error('You have not recognized this user');
+  }
+  
+  // Check if revocation is allowed (once per week)
+  const recognition = currentUser.recognizedUsers[recognitionIndex];
+  const now = new Date();
+  
+  if (recognition.lastRevokedAt) {
+    const cooldownEndDate = new Date(recognition.lastRevokedAt);
+    cooldownEndDate.setDate(cooldownEndDate.getDate() + 7); // 7 days cooldown
+    
+    if (now < cooldownEndDate) {
+      res.status(400);
+      throw new Error('You can only revoke recognition once per week');
+    }
+  }
+  
+  // Set 30-day cooldown for re-recognition
+  const canRecognizeAgainDate = new Date();
+  canRecognizeAgainDate.setDate(canRecognizeAgainDate.getDate() + 30);
+  
+  recognition.lastRevokedAt = now;
+  recognition.canRecognizeAgainAt = canRecognizeAgainDate;
+  
+  // Remove the recognition from the target user
+  const targetUser = await User.findById(targetUserId);
+  
+  if (targetUser) {
+    targetUser.identityRecognizers = targetUser.identityRecognizers.filter(
+      rec => rec.userId.toString() !== req.user._id.toString()
+    );
+    
+    // Update shadow reputation
+    updateShadowReputation(targetUser);
+    
+    await targetUser.save();
+  }
+  
+  await currentUser.save();
+  
+  // Update recognition stats
+  currentUser.recognitionStats.correctGuesses -= 1;
+  if (currentUser.recognitionStats.totalGuesses > 0) {
+    currentUser.recognitionStats.successRate = 
+      (currentUser.recognitionStats.correctGuesses / currentUser.recognitionStats.totalGuesses) * 100;
+  } else {
+    currentUser.recognitionStats.successRate = 0;
+  }
+  
+  await currentUser.save();
+  
+  res.status(200).json({
+    message: 'Recognition revoked successfully'
+  });
+});
+
+// @desc    Challenge a user who has recognized you
+// @route   POST /api/users/challenge
+// @access  Private
+const challengeUser = asyncHandler(async (req, res) => {
+  const { targetUserId } = req.body;
+  
+  // Find the current user
+  const currentUser = await User.findById(req.user._id);
+  
+  // Check if target has recognized the current user
+  const recognizerIndex = currentUser.identityRecognizers.findIndex(
+    rec => rec.userId.toString() === targetUserId
+  );
+  
+  if (recognizerIndex === -1) {
+    res.status(400);
+    throw new Error('This user has not recognized you');
+  }
+  
+  const recognizer = currentUser.identityRecognizers[recognizerIndex];
+  
+  if (!recognizer.isChallengeable) {
+    res.status(400);
+    throw new Error('You cannot challenge this user right now');
+  }
+  
+  // Mark as challenged
+  recognizer.isChallengeable = false;
+  currentUser.recognitionStats.lastChallengeAt = Date.now();
+  await currentUser.save();
+  
+  // Find the target user and update their status
+  const targetUser = await User.findById(targetUserId);
+  if (targetUser) {
+    const targetRecIndex = targetUser.recognizedUsers.findIndex(
+      rec => rec.userId.toString() === req.user._id.toString()
+    );
+    
+    if (targetRecIndex !== -1) {
+      // Reset recognition (soft reset - keep the record but allow re-recognition)
+      const canRecognizeAgainDate = new Date();
+      targetUser.recognizedUsers[targetRecIndex].lastRevokedAt = Date.now();
+      targetUser.recognizedUsers[targetRecIndex].canRecognizeAgainAt = canRecognizeAgainDate;
+      
+      await targetUser.save();
+    }
+  }
+  
+  res.status(200).json({
+    message: 'Challenge initiated successfully'
+  });
+});
+
+// @desc    Get recognition statistics for the current user
+// @route   GET /api/users/recognition-stats
+// @access  Private
+const getRecognitionStats = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id)
+    .select('recognitionStats shadowReputation recognizedUsers identityRecognizers')
+    .populate('recognizedUsers.userId', 'username anonymousAlias avatarEmoji')
+    .populate('identityRecognizers.userId', 'username anonymousAlias avatarEmoji');
+  
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  
+  // Calculate mutual recognitions
+  const recognizedIds = user.recognizedUsers.map(rec => rec.userId._id.toString());
+  const recognizerIds = user.identityRecognizers.map(rec => rec.userId._id.toString());
+  
+  const mutualRecognitions = recognizedIds.filter(id => recognizerIds.includes(id));
+  
+  res.status(200).json({
+    stats: {
+      recognizedCount: user.recognizedUsers.length,
+      recognizedByCount: user.identityRecognizers.length,
+      mutualCount: mutualRecognitions.length,
+      shadowReputation: user.shadowReputation,
+      recognitionRate: user.recognitionStats.successRate,
+      correctGuesses: user.recognitionStats.correctGuesses,
+      totalGuesses: user.recognitionStats.totalGuesses,
+    }
+  });
+});
+
+// Helper function to update shadow reputation
+const updateShadowReputation = (user) => {
+  // Base reputation formula - can be adjusted as needed
+  const recognizerCount = user.identityRecognizers.length;
+  
+  // Calculate reputation score (0-100 scale)
+  // This is a simple formula that can be expanded with more factors
+  let score = Math.min(recognizerCount * 5, 100);
+  
+  user.shadowReputation.score = score;
+  
+  // Add badges based on reputation
+  if (score >= 20 && !user.shadowReputation.badges.some(b => b.name === 'Shadow Novice')) {
+    user.shadowReputation.badges.push({
+      name: 'Shadow Novice',
+      unlockedAt: Date.now()
+    });
+  }
+  
+  if (score >= 50 && !user.shadowReputation.badges.some(b => b.name === 'Shadow Master')) {
+    user.shadowReputation.badges.push({
+      name: 'Shadow Master',
+      unlockedAt: Date.now()
+    });
+  }
+  
+  if (score >= 75 && !user.shadowReputation.badges.some(b => b.name === 'Shadow Elite')) {
+    user.shadowReputation.badges.push({
+      name: 'Shadow Elite',
+      unlockedAt: Date.now()
+    });
+  }
+  
+  if (score >= 100 && !user.shadowReputation.badges.some(b => b.name === 'Shadow Legend')) {
+    user.shadowReputation.badges.push({
+      name: 'Shadow Legend',
+      unlockedAt: Date.now()
+    });
+  }
+  
+  return score;
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getUserProfile,
   updateUserProfile,
   addFriend,
-  getOwnPosts
+  getOwnPosts,
+  recognizeUser,
+  leaveCompliment,
+  revokeRecognition,
+  challengeUser,
+  getRecognitionStats
 };

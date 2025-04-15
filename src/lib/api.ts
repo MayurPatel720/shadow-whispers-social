@@ -1,4 +1,3 @@
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import axios from 'axios';
@@ -307,6 +306,57 @@ export const joinGhostCircle = async (circleId: string) => {
 export const getGhostCircleById = async (circleId: string) => {
   const response = await api.get(`/api/ghost-circles/${circleId}`);
   return response.data;
+};
+
+// Recognition API calls
+export const recognizeUser = async (targetUsername: string) => {
+  try {
+    const response = await api.post('/api/users/recognize', { targetUsername });
+    return response.data;
+  } catch (error) {
+    console.error('Error recognizing user:', error);
+    throw error?.response?.data || error;
+  }
+};
+
+export const leaveCompliment = async (targetUserId: string, complimentText: string) => {
+  try {
+    const response = await api.post('/api/users/compliment', { targetUserId, complimentText });
+    return response.data;
+  } catch (error) {
+    console.error('Error leaving compliment:', error);
+    throw error?.response?.data || error;
+  }
+};
+
+export const revokeRecognition = async (targetUserId: string) => {
+  try {
+    const response = await api.post('/api/users/revoke-recognition', { targetUserId });
+    return response.data;
+  } catch (error) {
+    console.error('Error revoking recognition:', error);
+    throw error?.response?.data || error;
+  }
+};
+
+export const challengeUser = async (targetUserId: string) => {
+  try {
+    const response = await api.post('/api/users/challenge', { targetUserId });
+    return response.data;
+  } catch (error) {
+    console.error('Error challenging user:', error);
+    throw error?.response?.data || error;
+  }
+};
+
+export const getRecognitionStats = async () => {
+  try {
+    const response = await api.get('/api/users/recognition-stats');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching recognition stats:', error);
+    throw error?.response?.data || error;
+  }
 };
 
 export default api;

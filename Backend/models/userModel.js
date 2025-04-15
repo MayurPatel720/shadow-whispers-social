@@ -75,6 +75,15 @@ const userSchema = mongoose.Schema(
           type: Date,
           default: Date.now,
         },
+        compliments: [{
+          text: String,
+          createdAt: {
+            type: Date,
+            default: Date.now,
+          }
+        }],
+        lastRevokedAt: Date,
+        canRecognizeAgainAt: Date,
       },
     ],
     identityRecognizers: [
@@ -87,8 +96,44 @@ const userSchema = mongoose.Schema(
           type: Date,
           default: Date.now,
         },
+        compliments: [{
+          text: String,
+          createdAt: {
+            type: Date,
+            default: Date.now,
+          }
+        }],
+        isChallengeable: {
+          type: Boolean,
+          default: true
+        }
       },
     ],
+    shadowReputation: {
+      score: {
+        type: Number,
+        default: 0
+      },
+      badges: [{
+        name: String,
+        unlockedAt: Date
+      }]
+    },
+    recognitionStats: {
+      successRate: {
+        type: Number,
+        default: 0
+      },
+      totalGuesses: {
+        type: Number,
+        default: 0
+      },
+      correctGuesses: {
+        type: Number,
+        default: 0
+      },
+      lastChallengeAt: Date
+    },
     referralCode: {
       type: String,
       unique: true,
