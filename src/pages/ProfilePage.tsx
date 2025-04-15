@@ -10,11 +10,13 @@ const ProfilePage = () => {
   
   return (
     <div className="mx-auto max-w-4xl p-4">
-      <Tabs defaultValue="profile" 
-            value={activeTab} 
-            onValueChange={setActiveTab} 
-            className="w-full mb-6">
-        <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto">
+      <Tabs 
+        defaultValue="profile" 
+        value={activeTab} 
+        onValueChange={setActiveTab} 
+        className="w-full mb-6"
+      >
+        <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto">
           <TabsTrigger value="profile" className="flex items-center">
             <UserRound size={16} className="mr-2" />
             Profile
@@ -23,16 +25,28 @@ const ProfilePage = () => {
             <Users size={16} className="mr-2" />
             Recognition
           </TabsTrigger>
+          <TabsTrigger value="badges" className="flex items-center">
+            <Star size={16} className="mr-2" />
+            Badges
+          </TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="profile" className="mt-6">
+          <ProfileComponent />
+        </TabsContent>
+        
+        <TabsContent value="recognition" className="mt-6">
+          <RecognitionContainer />
+        </TabsContent>
+        
+        <TabsContent value="badges" className="mt-6">
+          <div className="text-center p-12 border border-dashed rounded-lg">
+            <Star className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No Badges Yet</h3>
+            <p className="text-muted-foreground">Keep participating to earn badges!</p>
+          </div>
+        </TabsContent>
       </Tabs>
-      
-      <TabsContent value="profile" className={activeTab === "profile" ? "" : "hidden"}>
-        <ProfileComponent />
-      </TabsContent>
-      
-      <TabsContent value="recognition" className={activeTab === "recognition" ? "" : "hidden"}>
-        <RecognitionContainer />
-      </TabsContent>
     </div>
   );
 };

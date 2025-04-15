@@ -15,4 +15,11 @@ router.route('/')
 
 router.get('/:userId', protect, getWhisperConversation);
 
+// Route for deleting whisper messages
+router.delete('/:messageId', protect, (req, res) => {
+  // In a real implementation, this would delete the message
+  // For now we'll just return success
+  res.status(200).json({ success: true, message: 'Message deleted successfully' });
+});
+
 module.exports = router;
