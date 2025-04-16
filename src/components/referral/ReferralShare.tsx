@@ -36,9 +36,18 @@ const ReferralShare = () => {
   };
 
   const getBaseUrl = () => {
-    // In production, use the actual domain
-    // In development, use localhost
     return window.location.origin;
+  };
+
+  const handleCopyLink = () => {
+    if (referralInfo?.referralCode) {
+      const referralUrl = `${getBaseUrl()}/invite?code=${referralInfo.referralCode}`;
+      navigator.clipboard.writeText(referralUrl);
+      toast({
+        title: "Referral link copied!",
+        description: "You can now share it with your friends.",
+      });
+    }
   };
 
   const handleShare = async (platform: string) => {
@@ -109,15 +118,31 @@ const ReferralShare = () => {
           ) : isError ? (
             <div className="text-red-500">Failed to load your referral code.</div>
           ) : (
-            <div className="flex gap-2">
-              <Input
-                readOnly
-                value={referralInfo?.referralCode || ""}
-                className="font-mono text-lg bg-muted"
-              />
-              <Button variant="outline" onClick={handleCopyCode}>
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              </Button>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={referralInfo?.referralCode || ""}
+                  className="font-mono text-lg bg-muted"
+                />
+                <Button variant="outline" onClick={handleCopyCode}>
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              
+              <div className="pt-2">
+                <p className="text-sm mb-2">Or share your invite link directly:</p>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={`${getBaseUrl()}/invite?code=${referralInfo?.referralCode || ""}`}
+                    className="font-mono text-xs bg-muted"
+                  />
+                  <Button variant="outline" onClick={handleCopyLink}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
           <p className="mt-4 text-sm text-muted-foreground">

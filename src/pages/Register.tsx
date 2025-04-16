@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, AtSign, KeyRound, Eye, EyeOff, UserPlus, Mail, Lock } from 'lucide-react';
+import { processReferral } from '@/lib/api-referral';
 
 const registerSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters' }),
@@ -32,6 +32,16 @@ const Register: React.FC = () => {
   const { register: registerUser, isLoading } = useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const location = useLocation();
+  
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const code = params.get('code');
+    if (code) {
+      setReferralCode(code);
+    }
+  }, [location.search]);
   
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -46,7 +56,15 @@ const Register: React.FC = () => {
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
-    await registerUser(data.username, data.fullName, data.email, data.password);
+    try {
+      await registerUser(data.username, data.fullName, data.email, data.password);
+      
+      if (referralCode) {
+        processReferral(referralCode);
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+    }
   };
 
   return (
@@ -54,6 +72,11 @@ const Register: React.FC = () => {
       <div className="w-full max-w-md text-center mb-8">
         <h1 className="text-5xl font-bold text-white mb-2">UnderCover</h1>
         <p className="text-gray-300 text-lg">Create your anonymous identity</p>
+        {referralCode && (
+          <div className="mt-2 py-1 px-3 bg-purple-700/50 rounded-full inline-block">
+            <p className="text-sm text-purple-200">Joining with referral code: {referralCode}</p>
+          </div>
+        )}
       </div>
       
       <Card className="w-full max-w-md border-purple-700/50 bg-black/40 backdrop-blur-md text-gray-100 shadow-xl">
