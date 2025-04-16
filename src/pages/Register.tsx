@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, AtSign, KeyRound, Eye, EyeOff, UserPlus, Mail, Lock } from 'lucide-react';
+import { User, AtSign, KeyRound, Eye, EyeOff, UserPlus, Mail, Lock, Gift } from 'lucide-react';
 import { processReferral } from '@/lib/api-referral';
 
 const registerSchema = z.object({
@@ -18,6 +19,7 @@ const registerSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   confirmPassword: z.string(),
+  referralCode: z.string().optional(),
   isAdult: z.boolean().refine(val => val === true, {
     message: 'You must be at least 18 years old to use this platform',
   })
@@ -34,6 +36,7 @@ const Register: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
   
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -51,17 +54,28 @@ const Register: React.FC = () => {
       email: '',
       password: '',
       confirmPassword: '',
+      referralCode: referralCode || '',
       isAdult: false,
     },
   });
+
+  // Update form when referralCode changes
+  useEffect(() => {
+    if (referralCode) {
+      form.setValue('referralCode', referralCode);
+    }
+  }, [referralCode, form]);
 
   const onSubmit = async (data: RegisterFormValues) => {
     try {
       await registerUser(data.username, data.fullName, data.email, data.password);
       
-      if (referralCode) {
-        processReferral(referralCode);
+      if (data.referralCode) {
+        processReferral(data.referralCode);
       }
+      
+      // Redirect to home page after successful registration
+      navigate('/');
     } catch (error) {
       console.error("Registration error:", error);
     }
@@ -212,6 +226,30 @@ const Register: React.FC = () => {
                         </Button>
                       </div>
                     </FormControl>
+                    <FormMessage className="text-red-400" />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="referralCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-purple-300">Referral Code (Optional)</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Gift className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400" size={18} />
+                        <Input 
+                          placeholder="Enter referral code" 
+                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5" 
+                          {...field} 
+                        />
+                      </div>
+                    </FormControl>
+                    <FormDescription className="text-xs text-gray-400">
+                      If someone invited you, enter their referral code here
+                    </FormDescription>
                     <FormMessage className="text-red-400" />
                   </FormItem>
                 )}

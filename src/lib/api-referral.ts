@@ -1,7 +1,6 @@
 
 import api from './api';
 import { LeaderboardEntry, PaymentMethod, ReferralProgram, ReferralStats } from '@/types/referral';
-import { useAuth } from '@/context/AuthContext';
 
 // Get user's referral information
 export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
@@ -69,14 +68,21 @@ export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
         }
       ],
       rewards: [],
-      leaderboardPosition: 5
+      leaderboardPosition: 0 // Will be calculated based on leaderboard
     };
     
     // Update which tiers are unlocked based on actual referral count
     mockReferralProgram.tiers = mockReferralProgram.tiers.map(tier => ({
       ...tier,
-      isUnlocked: mockReferralProgram.referralsCount >= tier.requiredReferrals
+      isUnlocked: userReferralsCount >= tier.requiredReferrals
     }));
+
+    // Get leaderboard to calculate user position
+    const leaderboard = await getReferralLeaderboard();
+    const userPosition = leaderboard.findIndex(entry => entry.userId === user._id) + 1;
+    if (userPosition > 0) {
+      mockReferralProgram.leaderboardPosition = userPosition;
+    }
     
     return mockReferralProgram;
   } catch (error) {
@@ -88,8 +94,37 @@ export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
 // Get referral leaderboard
 export const getReferralLeaderboard = async (): Promise<LeaderboardEntry[]> => {
   try {
-    // Mock leaderboard data with lower counts to better match a new app
-    return [
+    // Get all referral counts from localStorage
+    const storedReferrals = localStorage.getItem('referralCounts') || '{}';
+    const referralCounts = JSON.parse(storedReferrals);
+    
+    // Get all users
+    const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
+    
+    // Create leaderboard entries from real user data
+    let leaderboardEntries: LeaderboardEntry[] = allUsers.map((user: any) => {
+      const referralsCount = user._id && referralCounts[user._id] ? 
+        referralCounts[user._id] : 0;
+        
+      return {
+        position: 0, // Will be assigned after sorting
+        anonymousAlias: user.anonymousAlias || 'Anonymous',
+        avatarEmoji: user.avatarEmoji || '🎭',
+        referralsCount,
+        userId: user._id
+      };
+    });
+    
+    // Sort by referral count descending
+    leaderboardEntries = leaderboardEntries
+      .sort((a, b) => b.referralsCount - a.referralsCount)
+      .map((entry, index) => ({
+        ...entry,
+        position: index + 1
+      }));
+    
+    // If we don't have enough users, pad with some mock data
+    const mockLeaderboardEntries: LeaderboardEntry[] = [
       { position: 1, anonymousAlias: 'ShadowMaster', avatarEmoji: '🦹', referralsCount: 8, userId: '1' },
       { position: 2, anonymousAlias: 'PhantomWhisperer', avatarEmoji: '👻', referralsCount: 6, userId: '2' },
       { position: 3, anonymousAlias: 'MysticGhost', avatarEmoji: '🧙', referralsCount: 4, userId: '3' },
@@ -101,6 +136,28 @@ export const getReferralLeaderboard = async (): Promise<LeaderboardEntry[]> => {
       { position: 9, anonymousAlias: 'VeiledSerpent', avatarEmoji: '🐍', referralsCount: 0, userId: '9' },
       { position: 10, anonymousAlias: 'MoonShadow', avatarEmoji: '🌙', referralsCount: 0, userId: '10' }
     ];
+    
+    // If we have real users, use their data first, then fill in with mock data
+    if (leaderboardEntries.length > 0) {
+      // Fill in with mock data if we have fewer than 10 real users
+      if (leaderboardEntries.length < 10) {
+        const mockEntriesNeeded = 10 - leaderboardEntries.length;
+        for (let i = 0; i < mockEntriesNeeded; i++) {
+          // Only add mock entries that would not conflict with real user IDs
+          if (!leaderboardEntries.find(e => e.userId === mockLeaderboardEntries[i].userId)) {
+            leaderboardEntries.push({
+              ...mockLeaderboardEntries[i],
+              position: leaderboardEntries.length + 1
+            });
+          }
+        }
+      }
+      
+      return leaderboardEntries.slice(0, 10);
+    }
+    
+    // If no real users, return mock data
+    return mockLeaderboardEntries;
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
     throw error;
@@ -131,11 +188,11 @@ export const getReferralStats = async (): Promise<ReferralStats> => {
                        userReferralsCount < 10 ? 1 : 
                        userReferralsCount < 20 ? 2 : 3;
     
-    // Return mock statistics data based on actual user referrals
+    // Return real statistics data based on actual user referrals
     return {
       totalReferrals: userReferralsCount,
-      pendingReferrals: Math.min(1, Math.floor(userReferralsCount/3)),
-      completedReferrals: userReferralsCount - Math.min(1, Math.floor(userReferralsCount/3)),
+      pendingReferrals: Math.min(1, Math.floor(userReferralsCount/5)),
+      completedReferrals: userReferralsCount - Math.min(1, Math.floor(userReferralsCount/5)),
       nextMilestone: nextMilestone,
       currentTier: currentTier
     };
@@ -173,7 +230,7 @@ export const processReferral = (referralCode: string): boolean => {
         generateStableCode(user._id) : 
         (user.email ? generateStableCode(user.email) : '');
         
-      return userCode === referralCode;
+      return userCode === referralCode.toUpperCase();
     });
     
     if (!referrer) return false;

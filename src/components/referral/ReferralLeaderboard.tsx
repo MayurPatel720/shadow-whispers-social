@@ -5,8 +5,9 @@ import { getReferralLeaderboard } from "@/lib/api-referral";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Medal } from "lucide-react";
+import { Trophy, Medal, Crown, Star } from "lucide-react";
 import AvatarGenerator from "@/components/user/AvatarGenerator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ReferralLeaderboard = () => {
   const {
@@ -23,7 +24,7 @@ const ReferralLeaderboard = () => {
   const getPositionBadge = (position: number) => {
     switch (position) {
       case 1:
-        return <Trophy className="h-5 w-5 text-yellow-500" />;
+        return <Crown className="h-5 w-5 text-yellow-500" />;
       case 2:
         return <Medal className="h-5 w-5 text-gray-400" />;
       case 3:
@@ -44,6 +45,32 @@ const ReferralLeaderboard = () => {
         return "border-amber-700";
       default:
         return "";
+    }
+  };
+  
+  // Function to get top user rewards
+  const getTopReward = (position: number) => {
+    switch (position) {
+      case 1:
+        return {
+          icon: <Star className="h-4 w-4 mr-1 text-yellow-500" />,
+          label: "₹1000 + Premium For Life",
+          tooltip: "Top shadow gets ₹1000 cash reward and lifetime premium access"
+        };
+      case 2:
+        return {
+          icon: <Star className="h-4 w-4 mr-1 text-gray-400" />,
+          label: "₹500 + 1 Year Premium",
+          tooltip: "Second place shadow gets ₹500 cash reward and 1 year of premium access"
+        };
+      case 3:
+        return {
+          icon: <Star className="h-4 w-4 mr-1 text-amber-700" />,
+          label: "₹250 + 6 Months Premium",
+          tooltip: "Third place shadow gets ₹250 cash reward and 6 months of premium access"
+        };
+      default:
+        return null;
     }
   };
 
@@ -69,32 +96,51 @@ const ReferralLeaderboard = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {leaderboard?.map((entry) => (
-                <div
-                  key={entry.userId}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${getPositionStyle(
-                    entry.position
-                  )} ${entry.position <= 3 ? "bg-purple-900/20" : "bg-card"}`}
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="flex justify-center items-center w-8 h-8">
-                      {getPositionBadge(entry.position)}
+              {leaderboard?.map((entry) => {
+                const topReward = getTopReward(entry.position);
+                
+                return (
+                  <div
+                    key={entry.userId}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${getPositionStyle(
+                      entry.position
+                    )} ${entry.position <= 3 ? "bg-purple-900/20" : "bg-card"}`}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="flex justify-center items-center w-8 h-8">
+                        {getPositionBadge(entry.position)}
+                      </div>
+                      <AvatarGenerator
+                        emoji={entry.avatarEmoji}
+                        nickname={entry.anonymousAlias}
+                        color="#6E59A5"
+                        size="sm"
+                      />
+                      <div className="space-y-1">
+                        <p className="font-medium">{entry.anonymousAlias}</p>
+                        
+                        {topReward && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <p className="text-xs flex items-center text-purple-300">
+                                  {topReward.icon} {topReward.label}
+                                </p>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{topReward.tooltip}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </div>
-                    <AvatarGenerator
-                      emoji={entry.avatarEmoji}
-                      nickname={entry.anonymousAlias}
-                      color="#6E59A5"
-                      size="sm"
-                    />
-                    <div>
-                      <p className="font-medium">{entry.anonymousAlias}</p>
-                    </div>
+                    <Badge variant="outline" className="bg-purple-500/10 text-purple-400">
+                      {entry.referralsCount} Referrals
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="bg-purple-500/10 text-purple-400">
-                    {entry.referralsCount} Referrals
-                  </Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -111,7 +157,8 @@ const ReferralLeaderboard = () => {
           <ul className="list-disc pl-5 space-y-2">
             <li>Each verified referral earns you one point</li>
             <li>New users must complete profile setup and remain active for 7 days to count</li>
-            <li>Monthly winners receive exclusive in-app items and community spotlight</li>
+            <li>Monthly winners receive exclusive in-app rewards and community recognition</li>
+            <li>Top 3 shadows receive special cash rewards and premium features</li>
             <li>The leaderboard resets on the 1st of each month</li>
           </ul>
         </CardContent>

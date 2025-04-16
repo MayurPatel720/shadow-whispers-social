@@ -105,6 +105,14 @@ const InvitePage = () => {
       navigate('/login');
     }
   };
+  
+  const handleRegister = () => {
+    if (inviteType === 'referral') {
+      navigate(`/register?code=${referralCode}`);
+    } else {
+      navigate('/register');
+    }
+  };
 
   // If no valid parameters are provided
   if (inviteType === 'unknown' || (inviteType === 'circle' && !circleId) || (inviteType === 'referral' && !referralCode)) {
@@ -147,10 +155,15 @@ const InvitePage = () => {
             </Button>
           ) : (
             <div className="space-y-4">
-              <p className="text-yellow-300">You need to log in to complete this referral</p>
-              <Button onClick={handleLogin} className="bg-purple-600 hover:bg-purple-700 w-full">
-                Login to Continue
-              </Button>
+              <p className="text-yellow-300">You need to login or create an account to use this referral</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button onClick={handleLogin} className="bg-purple-600 hover:bg-purple-700 flex-1">
+                  Login
+                </Button>
+                <Button onClick={handleRegister} className="bg-indigo-600 hover:bg-indigo-700 flex-1">
+                  Register
+                </Button>
+              </div>
             </div>
           )}
         </div>
