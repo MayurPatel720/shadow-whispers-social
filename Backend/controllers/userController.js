@@ -3,6 +3,97 @@ const User = require('../models/userModel');
 const { generateToken } = require('../utils/jwtHelper');
 const postModel = require('../models/postModel');
 
+// Track referrals in memory for this demo
+// In production, this would be stored in the database
+const referralCounts = {};
+
+// @desc    Process referral
+// @route   POST /api/users/process-referral
+// @access  Public
+const processReferral = asyncHandler(async (req, res) => {
+  const { referralCode, referredUserId } = req.body;
+  
+  if (!referralCode) {
+    res.status(400);
+    throw new Error('Referral code is required');
+  }
+
+  try {
+    // Find the user with this referral code
+    // In this implementation, we generate a stable code based on user ID
+    const users = await User.find({});
+    const referrer = users.find(user => {
+      // Same algorithm as in frontend to generate stable referral code
+      const generateStableCode = (input) => {
+        let hash = 0;
+        for (let i = 0; i < input.length; i++) {
+          const char = input.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash;
+        }
+        return Math.abs(hash).toString(36).substring(0, 6).toUpperCase().padEnd(6, '0');
+      };
+      
+      const userCode = generateStableCode(user._id.toString());
+      return userCode === referralCode.toUpperCase();
+    });
+
+    if (!referrer) {
+      res.status(404);
+      throw new Error('Invalid referral code');
+    }
+
+    // Increment referral count for this user
+    const referrerId = referrer._id.toString();
+    if (!referralCounts[referrerId]) {
+      referralCounts[referrerId] = 0;
+    }
+    referralCounts[referrerId] += 1;
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Referral processed successfully' 
+    });
+  } catch (error) {
+    res.status(500);
+    throw new Error('Error processing referral: ' + error.message);
+  }
+});
+
+// @desc    Get referral leaderboard
+// @route   GET /api/users/referral-leaderboard
+// @access  Public
+const getReferralLeaderboard = asyncHandler(async (req, res) => {
+  try {
+    // Get all users
+    const users = await User.find({}, 'anonymousAlias avatarEmoji');
+    
+    // Create leaderboard entries from user data with their referral counts
+    const leaderboardEntries = users.map(user => {
+      const userId = user._id.toString();
+      return {
+        userId: userId,
+        anonymousAlias: user.anonymousAlias,
+        avatarEmoji: user.avatarEmoji,
+        referralsCount: referralCounts[userId] || 0
+      };
+    });
+    
+    // Sort by referral count descending
+    const sortedEntries = leaderboardEntries
+      .sort((a, b) => b.referralsCount - a.referralsCount)
+      .map((entry, index) => ({
+        ...entry,
+        position: index + 1
+      }));
+    
+    res.status(200).json(sortedEntries.slice(0, 10));
+  } catch (error) {
+    res.status(500);
+    throw new Error('Error fetching leaderboard: ' + error.message);
+  }
+});
+
 // @desc    Register a new user
 // @route   POST /api/users/register
 // @access  Public
@@ -24,8 +115,6 @@ const getOwnPosts = asyncHandler(async (req, res) => {
   // Send the posts as the response
   res.status(200).json(posts);
 });
-
-
 
 const registerUser = asyncHandler(async (req, res) => {
   const { username, fullName, email, password } = req.body;
@@ -192,5 +281,7 @@ module.exports = {
   getUserProfile,
   updateUserProfile,
   addFriend,
-  getOwnPosts
+  getOwnPosts,
+  processReferral,
+  getReferralLeaderboard
 };

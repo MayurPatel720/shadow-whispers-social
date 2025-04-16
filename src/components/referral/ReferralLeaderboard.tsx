@@ -8,8 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Medal, Crown, Star } from "lucide-react";
 import AvatarGenerator from "@/components/user/AvatarGenerator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
 const ReferralLeaderboard = () => {
+  const { toast } = useToast();
+
   const {
     data: leaderboard,
     isLoading,
@@ -18,6 +21,15 @@ const ReferralLeaderboard = () => {
   } = useQuery({
     queryKey: ["referralLeaderboard"],
     queryFn: getReferralLeaderboard,
+    meta: {
+      onError: () => {
+        toast({
+          variant: "destructive",
+          title: "Failed to load leaderboard",
+          description: "Could not retrieve the referral leaderboard data.",
+        });
+      },
+    },
   });
 
   // Function to determine medal icon based on position

@@ -7,13 +7,17 @@ const {
   getUserProfile,
   updateUserProfile,
   addFriend,
-  getOwnPosts
+  getOwnPosts,
+  processReferral,
+  getReferralLeaderboard
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 
 // Public routes
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+router.post('/process-referral', processReferral);
+router.get('/referral-leaderboard', getReferralLeaderboard);
 
 // Private routes
 router.get('/userposts/:userId', protect, getOwnPosts);

@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, AtSign, KeyRound, Eye, EyeOff, UserPlus, Mail, Lock, Gift } from 'lucide-react';
 import { processReferral } from '@/lib/api-referral';
+import { useToast } from '@/hooks/use-toast';
 
 const registerSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters' }),
@@ -37,7 +38,9 @@ const Register: React.FC = () => {
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
   
+  // Extract referral code from URL
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const code = params.get('code');
@@ -54,7 +57,7 @@ const Register: React.FC = () => {
       email: '',
       password: '',
       confirmPassword: '',
-      referralCode: referralCode || '',
+      referralCode: '',
       isAdult: false,
     },
   });
@@ -68,16 +71,41 @@ const Register: React.FC = () => {
 
   const onSubmit = async (data: RegisterFormValues) => {
     try {
-      await registerUser(data.username, data.fullName, data.email, data.password);
+      // Register the user
+      const newUser = await registerUser(data.username, data.fullName, data.email, data.password);
       
+      // Process referral code if provided
       if (data.referralCode) {
-        processReferral(data.referralCode);
+        const referralSuccess = await processReferral(data.referralCode);
+        
+        if (referralSuccess) {
+          toast({
+            title: "Referral Applied",
+            description: "The referral code has been successfully applied.",
+          });
+          
+          // Store the new user in allUsers for the referral system
+          const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
+          allUsers.push(newUser);
+          localStorage.setItem('allUsers', JSON.stringify(allUsers));
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Invalid Referral Code",
+            description: "The referral code could not be processed.",
+          });
+        }
       }
       
       // Redirect to home page after successful registration
       navigate('/');
     } catch (error) {
       console.error("Registration error:", error);
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Could not create your account. Please try again.",
+      });
     }
   };
 
@@ -244,6 +272,7 @@ const Register: React.FC = () => {
                           placeholder="Enter referral code" 
                           className="bg-gray-900/60 border-purple-800/50 pl-10 py-5" 
                           {...field} 
+                          value={field.value || ''}
                         />
                       </div>
                     </FormControl>

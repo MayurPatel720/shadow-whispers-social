@@ -1,12 +1,9 @@
-
 import api from './api';
 import { LeaderboardEntry, PaymentMethod, ReferralProgram, ReferralStats } from '@/types/referral';
 
 // Get user's referral information
 export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
   try {
-    // In a real implementation, we would call the API
-    // For now, generate a stable referral code based on user ID or email
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     
     // Generate a deterministic code based on user ID or email
@@ -24,15 +21,12 @@ export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
       return baseCode.padEnd(6, '0');
     };
     
-    // Get a stable referral code based on user email or ID
-    const stableCode = user._id ? 
-      generateStableCode(user._id) : 
-      (user.email ? generateStableCode(user.email) : 'SAMPLE');
-      
-    // Check localStorage to see if this user has referred anyone
-    // In a real app, this would come from the backend
-    const storedReferrals = localStorage.getItem('referralCounts') || '{}';
-    const referralCounts = JSON.parse(storedReferrals);
+    // Get a stable referral code based on user ID
+    const stableCode = user._id ? generateStableCode(user._id) : 'SAMPLE';
+    
+    // Get real referral counts from localStorage
+    const referralData = localStorage.getItem('userReferrals') || '{}';
+    const referralCounts = JSON.parse(referralData);
     
     // Get this user's count or default to 0
     const userReferralsCount = user._id && referralCounts[user._id] ? 
@@ -94,9 +88,19 @@ export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
 // Get referral leaderboard
 export const getReferralLeaderboard = async (): Promise<LeaderboardEntry[]> => {
   try {
-    // Get all referral counts from localStorage
-    const storedReferrals = localStorage.getItem('referralCounts') || '{}';
-    const referralCounts = JSON.parse(storedReferrals);
+    // Try to get leaderboard from API first
+    try {
+      const response = await api.get('/api/users/referral-leaderboard');
+      if (response.status === 200 && response.data && response.data.length > 0) {
+        return response.data;
+      }
+    } catch (error) {
+      console.log('Failed to get leaderboard from API, using localStorage');
+    }
+    
+    // Fall back to localStorage if API fails
+    const referralData = localStorage.getItem('userReferrals') || '{}';
+    const referralCounts = JSON.parse(referralData);
     
     // Get all users
     const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
@@ -123,41 +127,19 @@ export const getReferralLeaderboard = async (): Promise<LeaderboardEntry[]> => {
         position: index + 1
       }));
     
-    // If we don't have enough users, pad with some mock data
-    const mockLeaderboardEntries: LeaderboardEntry[] = [
-      { position: 1, anonymousAlias: 'ShadowMaster', avatarEmoji: '🦹', referralsCount: 8, userId: '1' },
-      { position: 2, anonymousAlias: 'PhantomWhisperer', avatarEmoji: '👻', referralsCount: 6, userId: '2' },
-      { position: 3, anonymousAlias: 'MysticGhost', avatarEmoji: '🧙', referralsCount: 4, userId: '3' },
-      { position: 4, anonymousAlias: 'NebulaHunter', avatarEmoji: '🌌', referralsCount: 3, userId: '4' },
-      { position: 5, anonymousAlias: 'VoidWalker', avatarEmoji: '🎭', referralsCount: 2, userId: '5' },
-      { position: 6, anonymousAlias: 'CrypticRaven', avatarEmoji: '🦅', referralsCount: 1, userId: '6' },
-      { position: 7, anonymousAlias: 'EnigmaSpecter', avatarEmoji: '🔮', referralsCount: 1, userId: '7' },
-      { position: 8, anonymousAlias: 'SilentFox', avatarEmoji: '🦊', referralsCount: 1, userId: '8' },
-      { position: 9, anonymousAlias: 'VeiledSerpent', avatarEmoji: '🐍', referralsCount: 0, userId: '9' },
-      { position: 10, anonymousAlias: 'MoonShadow', avatarEmoji: '🌙', referralsCount: 0, userId: '10' }
-    ];
-    
-    // If we have real users, use their data first, then fill in with mock data
-    if (leaderboardEntries.length > 0) {
-      // Fill in with mock data if we have fewer than 10 real users
-      if (leaderboardEntries.length < 10) {
-        const mockEntriesNeeded = 10 - leaderboardEntries.length;
-        for (let i = 0; i < mockEntriesNeeded; i++) {
-          // Only add mock entries that would not conflict with real user IDs
-          if (!leaderboardEntries.find(e => e.userId === mockLeaderboardEntries[i].userId)) {
-            leaderboardEntries.push({
-              ...mockLeaderboardEntries[i],
-              position: leaderboardEntries.length + 1
-            });
-          }
-        }
-      }
-      
-      return leaderboardEntries.slice(0, 10);
+    // If no real data, use some mock data
+    if (leaderboardEntries.length === 0) {
+      const mockLeaderboardEntries: LeaderboardEntry[] = [
+        { position: 1, anonymousAlias: 'ShadowMaster', avatarEmoji: '🦹', referralsCount: 8, userId: '1' },
+        { position: 2, anonymousAlias: 'PhantomWhisperer', avatarEmoji: '👻', referralsCount: 6, userId: '2' },
+        { position: 3, anonymousAlias: 'MysticGhost', avatarEmoji: '🧙', referralsCount: 4, userId: '3' },
+        { position: 4, anonymousAlias: 'NebulaHunter', avatarEmoji: '🌌', referralsCount: 3, userId: '4' },
+        { position: 5, anonymousAlias: 'VoidWalker', avatarEmoji: '🎭', referralsCount: 2, userId: '5' }
+      ];
+      return mockLeaderboardEntries;
     }
     
-    // If no real users, return mock data
-    return mockLeaderboardEntries;
+    return leaderboardEntries.slice(0, 10);
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
     throw error;
@@ -171,8 +153,8 @@ export const getReferralStats = async (): Promise<ReferralStats> => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     
     // Get referral counts from localStorage
-    const storedReferrals = localStorage.getItem('referralCounts') || '{}';
-    const referralCounts = JSON.parse(storedReferrals);
+    const referralData = localStorage.getItem('userReferrals') || '{}';
+    const referralCounts = JSON.parse(referralData);
     
     // Get this user's count or default to 0
     const userReferralsCount = user._id && referralCounts[user._id] ? 
@@ -203,14 +185,22 @@ export const getReferralStats = async (): Promise<ReferralStats> => {
 };
 
 // Process a referral when someone signs up with a code
-export const processReferral = (referralCode: string): boolean => {
+export const processReferral = async (referralCode: string): Promise<boolean> => {
   try {
     if (!referralCode) return false;
     
-    // In a real implementation, this would verify the code server-side
-    // For demo purposes, we'll simulate validating and processing the referral
+    // Try to process referral via API first
+    try {
+      const response = await api.post('/api/users/process-referral', { referralCode });
+      if (response.status === 200) {
+        return true;
+      }
+    } catch (apiError) {
+      console.log('Failed to process referral via API, falling back to localStorage');
+    }
     
-    // Get all users (in a real app, this would be a server-side lookup)
+    // Fall back to localStorage for development/testing
+    // Get all users
     const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
     
     // Find the user with this referral code
@@ -226,23 +216,20 @@ export const processReferral = (referralCode: string): boolean => {
         return Math.abs(hash).toString(36).substring(0, 6).toUpperCase().padEnd(6, '0');
       };
       
-      const userCode = user._id ? 
-        generateStableCode(user._id) : 
-        (user.email ? generateStableCode(user.email) : '');
-        
+      const userCode = user._id ? generateStableCode(user._id) : '';
       return userCode === referralCode.toUpperCase();
     });
     
     if (!referrer) return false;
     
     // Update referral count for this user
-    const storedReferrals = localStorage.getItem('referralCounts') || '{}';
-    const referralCounts = JSON.parse(storedReferrals);
+    const referralData = localStorage.getItem('userReferrals') || '{}';
+    const referralCounts = JSON.parse(referralData);
     
     // Increment count
     if (referrer._id) {
       referralCounts[referrer._id] = (referralCounts[referrer._id] || 0) + 1;
-      localStorage.setItem('referralCounts', JSON.stringify(referralCounts));
+      localStorage.setItem('userReferrals', JSON.stringify(referralCounts));
     }
     
     return true;
