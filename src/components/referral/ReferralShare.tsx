@@ -35,10 +35,16 @@ const ReferralShare = () => {
     }
   };
 
+  const getBaseUrl = () => {
+    // In production, use the actual domain
+    // In development, use localhost
+    return window.location.origin;
+  };
+
   const handleShare = async (platform: string) => {
     try {
       let shareUrl = "";
-      const referralUrl = `https://undercover-app.com/invite?code=${referralInfo?.referralCode}`;
+      const referralUrl = `${getBaseUrl()}/invite?code=${referralInfo?.referralCode}`;
       const shareText = "Unmask the fun—join me on Undercover with my code!";
 
       switch (platform) {

@@ -9,7 +9,6 @@ import {
   X,
   PlusCircle,
   LogOut,
-  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import WhisperModal from "../whisper/WhisperModal";
@@ -102,7 +101,6 @@ const AppShell = ({ children }: AppShellProps) => {
             <NavItem icon={<Home size={18} />} label="Home" active={currentTab === "Home"} onClick={() => navigate("/")} />
             <NavItem icon={<Users size={18} />} label="Ghost Circles" active={currentTab === "Circles"} onClick={() => navigate("/ghost-circles")} />
             <NavItem icon={<MessageSquare size={18} />} label="Whispers" active={currentTab === "Whispers"} onClick={() => navigate("/whispers")} />
-            <NavItem icon={<Gift size={18} />} label="Referrals" active={currentTab === "Referrals"} onClick={() => navigate("/referrals")} />
             <NavItem icon={<UserRound size={18} />} label="Profile" active={currentTab === "Profile"} onClick={() => navigate("/profile")} />
           </div>
 
@@ -149,7 +147,6 @@ const AppShell = ({ children }: AppShellProps) => {
               <NavItem icon={<Home size={18} />} label="Home" active={currentTab === "Home"} onClick={() => navigate("/")} />
               <NavItem icon={<Users size={18} />} label="Ghost Circles" active={currentTab === "Circles"} onClick={() => navigate("/ghost-circles")} />
               <NavItem icon={<MessageSquare size={18} />} label="Whispers" active={currentTab === "Whispers"} onClick={() => navigate("/whispers")} />
-              <NavItem icon={<Gift size={18} />} label="Referrals" active={currentTab === "Referrals"} onClick={() => navigate("/referrals")} />
               <NavItem icon={<UserRound size={18} />} label="Profile" active={currentTab === "Profile"} onClick={() => navigate("/profile")} />
             </div>
 
@@ -199,8 +196,8 @@ const AppShell = ({ children }: AppShellProps) => {
           <Button variant="secondary" size="icon" className="rounded-full bg-purple-600 text-white" onClick={openWhisperModal}>
             <PlusCircle size={20} />
           </Button>
-          <Button variant="ghost" size="icon" className={currentTab === "Referrals" ? "text-purple-500" : "text-muted-foreground"} onClick={() => navigate("/referrals")}>
-            <Gift size={20} />
+          <Button variant="ghost" size="icon" className={currentTab === "Whispers" ? "text-purple-500" : "text-muted-foreground"} onClick={() => navigate("/whispers")}>
+            <MessageSquare size={20} />
           </Button>
           <Button variant="ghost" size="icon" className={currentTab === "Profile" ? "text-purple-500" : "text-muted-foreground"} onClick={() => navigate("/profile")}>
             <UserRound size={20} />

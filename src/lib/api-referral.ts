@@ -23,7 +23,7 @@ export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
           level: 2,
           requiredReferrals: 10,
           rewardType: 'cash',
-          rewardDescription: '$100 Cash Reward',
+          rewardDescription: '₹100 Cash Reward',
           rewardIcon: '💰',
           isUnlocked: false
         },
