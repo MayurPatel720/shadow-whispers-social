@@ -12,7 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { claimReward } from "@/lib/api-referral";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, PaypalIcon, Gift } from "lucide-react";
+import { Loader2, Gift } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 
 interface ClaimRewardModalProps {
