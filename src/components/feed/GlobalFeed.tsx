@@ -1,4 +1,6 @@
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getGlobalFeed } from "@/lib/api";
@@ -8,13 +10,12 @@ import { Loader, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CreatePostModal from "@/components/feed/CreatePostModal";
 import { toast } from "@/hooks/use-toast";
-import { PostType } from "@/types";
 
 const GlobalFeed = () => {
   const { user } = useAuth();
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   
-  const { data: posts = [], isLoading, error, refetch } = useQuery({
+  const { data: posts, isLoading, error, refetch } = useQuery({
     queryKey: ['globalFeed'],
     queryFn: getGlobalFeed,
     meta: {
@@ -75,9 +76,9 @@ const GlobalFeed = () => {
         </Button>
       </div>
       
-      {Array.isArray(posts) && posts.length > 0 ? (
+      {posts && posts.length > 0 ? (
         <div className="space-y-4">
-          {posts.map((post: PostType) => (
+          {posts.map((post: any) => (
             <PostCard 
               key={post._id} 
               post={post} 

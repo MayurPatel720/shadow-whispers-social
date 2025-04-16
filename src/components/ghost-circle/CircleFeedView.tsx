@@ -7,7 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import PostCard from "@/components/feed/PostCard";
 import CreatePostModal from "@/components/feed/CreatePostModal"; 
 import { getGhostCirclePosts, getGhostCircleById } from "@/lib/api";
-import { PostType, GhostCircleType } from "@/types";
 
 interface CircleFeedViewProps {
   circleId: string;
@@ -62,12 +61,6 @@ const CircleFeedView: React.FC<CircleFeedViewProps> = ({ circleId, onBack }) => 
     );
   }
 
-  const circleMembers = circleDetails && Array.isArray(circleDetails.members) 
-    ? circleDetails.members 
-    : [];
-
-  const circlePosts = Array.isArray(posts) ? posts : [];
-
   return (
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10 bg-background p-4 border-b border-border">
@@ -93,7 +86,7 @@ const CircleFeedView: React.FC<CircleFeedViewProps> = ({ circleId, onBack }) => 
           <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
             <div className="flex items-center gap-1">
               <Users size={14} />
-              <span>{circleMembers.length} members</span>
+              <span>{circleDetails.members?.length || 0} members</span>
             </div>
             <div className="flex gap-4">
               <Button 
@@ -125,7 +118,7 @@ const CircleFeedView: React.FC<CircleFeedViewProps> = ({ circleId, onBack }) => 
       <div className="flex-1 p-4 overflow-auto">
         {activeTab === 'posts' && (
           <div>
-            {circlePosts.length === 0 ? (
+            {posts.length === 0 ? (
               <div className="text-center py-12 bg-card rounded-lg border border-dashed">
                 <Ghost className="mx-auto h-12 w-12 text-gray-300 mb-3" />
                 <h3 className="text-lg font-medium text-gray-700 mb-2">No posts yet</h3>
@@ -139,7 +132,7 @@ const CircleFeedView: React.FC<CircleFeedViewProps> = ({ circleId, onBack }) => 
               </div>
             ) : (
               <div className="space-y-4">
-                {circlePosts.map((post: PostType) => (
+                {posts.map((post) => (
                   <PostCard key={post._id} post={post} onRefresh={refetch} />
                 ))}
               </div>
@@ -161,9 +154,9 @@ const CircleFeedView: React.FC<CircleFeedViewProps> = ({ circleId, onBack }) => 
         
         {activeTab === 'members' && circleDetails && (
           <div className="bg-card rounded-lg border">
-            <h3 className="p-4 border-b font-medium">Members ({circleMembers.length})</h3>
+            <h3 className="p-4 border-b font-medium">Members ({circleDetails.members?.length || 0})</h3>
             <div className="divide-y">
-              {circleMembers.map((member) => (
+              {circleDetails.members?.map((member) => (
                 <div key={member._id} className="p-4 flex items-center">
                   <div className="h-8 w-8 rounded-full bg-undercover-dark flex items-center justify-center mr-3">
                     {member.avatarEmoji || "🎭"}

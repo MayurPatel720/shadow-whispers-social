@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Home,
@@ -15,34 +14,23 @@ import WhisperModal from "../whisper/WhisperModal";
 import { useAuth } from "@/context/AuthContext";
 import AvatarGenerator from "../user/AvatarGenerator";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { getMyWhispers } from "@/lib/api";
 
 const NavItem: React.FC<{
   icon: React.ReactNode;
   label: string;
   active?: boolean;
   onClick?: () => void;
-  badge?: number;
-}> = ({ icon, label, active = false, onClick, badge }) => {
+}> = ({ icon, label, active = false, onClick }) => {
   return (
     <Button
       variant={active ? "secondary" : "ghost"}
       className={`justify-start w-full ${
         active ? "bg-purple-600/20 text-purple-500" : "text-muted-foreground"
-      } relative`}
+      }`}
       onClick={onClick}
     >
       {icon}
       <span className="ml-2">{label}</span>
-      {badge && badge > 0 ? (
-        <Badge 
-          className="absolute top-1 right-1 bg-red-500 text-white min-w-[18px] h-[18px] flex items-center justify-center p-0 text-xs"
-        >
-          {badge > 9 ? "9+" : badge}
-        </Badge>
-      ) : null}
     </Button>
   );
 };
@@ -58,19 +46,6 @@ const AppShell = ({ children }: AppShellProps) => {
   const [currentTab, setCurrentTab] = useState("Home");
   const [whisperModalOpen, setWhisperModalOpen] = useState(false);
   const { user, logout } = useAuth();
-
-  // Get whispers to check for unread messages
-  const { data: whispers } = useQuery({
-    queryKey: ['whispers'],
-    queryFn: getMyWhispers,
-    enabled: !!user,
-  });
-
-  // Calculate unread whispers count
-  const unreadWhispersCount = useMemo(() => {
-    if (!whispers) return 0;
-    return whispers.reduce((count, convo) => count + (convo.unreadCount || 0), 0);
-  }, [whispers]);
 
   useEffect(() => {
     if (location.pathname === "/") setCurrentTab("Home");
@@ -123,13 +98,7 @@ const AppShell = ({ children }: AppShellProps) => {
           <div className="space-y-1">
             <NavItem icon={<Home size={18} />} label="Home" active={currentTab === "Home"} onClick={() => navigate("/")} />
             <NavItem icon={<Users size={18} />} label="Ghost Circles" active={currentTab === "Circles"} onClick={() => navigate("/ghost-circles")} />
-            <NavItem 
-              icon={<MessageSquare size={18} />} 
-              label="Whispers" 
-              active={currentTab === "Whispers"} 
-              onClick={() => navigate("/whispers")} 
-              badge={unreadWhispersCount}
-            />
+            <NavItem icon={<MessageSquare size={18} />} label="Whispers" active={currentTab === "Whispers"} onClick={() => navigate("/whispers")} />
             <NavItem icon={<UserRound size={18} />} label="Profile" active={currentTab === "Profile"} onClick={() => navigate("/profile")} />
           </div>
 
@@ -175,13 +144,7 @@ const AppShell = ({ children }: AppShellProps) => {
             <div className="space-y-2">
               <NavItem icon={<Home size={18} />} label="Home" active={currentTab === "Home"} onClick={() => navigate("/")} />
               <NavItem icon={<Users size={18} />} label="Ghost Circles" active={currentTab === "Circles"} onClick={() => navigate("/ghost-circles")} />
-              <NavItem 
-                icon={<MessageSquare size={18} />} 
-                label="Whispers" 
-                active={currentTab === "Whispers"} 
-                onClick={() => navigate("/whispers")} 
-                badge={unreadWhispersCount}
-              />
+              <NavItem icon={<MessageSquare size={18} />} label="Whispers" active={currentTab === "Whispers"} onClick={() => navigate("/whispers")} />
               <NavItem icon={<UserRound size={18} />} label="Profile" active={currentTab === "Profile"} onClick={() => navigate("/profile")} />
             </div>
 
@@ -208,20 +171,8 @@ const AppShell = ({ children }: AppShellProps) => {
             <span className="text-xl mr-2">🕶️</span> Undercover
           </h1>
           <div className="flex items-center space-x-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-purple-500 relative"
-              onClick={openWhisperModal}
-            >
+            <Button variant="ghost" size="icon" className="text-purple-500" onClick={openWhisperModal}>
               <MessageSquare size={20} />
-              {unreadWhispersCount > 0 && (
-                <Badge 
-                  className="absolute -top-1 -right-1 bg-red-500 text-white min-w-[18px] h-[18px] flex items-center justify-center p-0 text-xs"
-                >
-                  {unreadWhispersCount > 9 ? "9+" : unreadWhispersCount}
-                </Badge>
-              )}
             </Button>
             <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)}>
               <Menu size={20} />
@@ -243,20 +194,8 @@ const AppShell = ({ children }: AppShellProps) => {
           <Button variant="secondary" size="icon" className="rounded-full bg-purple-600 text-white" onClick={openWhisperModal}>
             <PlusCircle size={20} />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className={`${currentTab === "Whispers" ? "text-purple-500" : "text-muted-foreground"} relative`} 
-            onClick={() => navigate("/whispers")}
-          >
+          <Button variant="ghost" size="icon" className={currentTab === "Whispers" ? "text-purple-500" : "text-muted-foreground"} onClick={() => navigate("/whispers")}>
             <MessageSquare size={20} />
-            {unreadWhispersCount > 0 && (
-              <Badge 
-                className="absolute -top-1 -right-1 bg-red-500 text-white min-w-[18px] h-[18px] flex items-center justify-center p-0 text-xs"
-              >
-                {unreadWhispersCount > 9 ? "9+" : unreadWhispersCount}
-              </Badge>
-            )}
           </Button>
           <Button variant="ghost" size="icon" className={currentTab === "Profile" ? "text-purple-500" : "text-muted-foreground"} onClick={() => navigate("/profile")}>
             <UserRound size={20} />

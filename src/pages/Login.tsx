@@ -1,6 +1,6 @@
 
-import React, { useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email' }),
@@ -20,21 +19,8 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login: React.FC = () => {
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const { login, isLoading } = useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  // Extract redirect URL if any
-  const queryParams = new URLSearchParams(location.search);
-  const redirectTo = queryParams.get('redirect') || '/';
-  
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate(redirectTo, { replace: true });
-    }
-  }, [isAuthenticated, navigate, redirectTo]);
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -45,17 +31,7 @@ const Login: React.FC = () => {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    try {
-      await login(data.email, data.password);
-      // Navigation will happen in the useEffect
-    } catch (error) {
-      console.error('Login error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Login failed',
-        description: error.message || 'Invalid email or password',
-      });
-    }
+    await login(data.email, data.password);
   };
 
   return (

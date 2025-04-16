@@ -1,10 +1,9 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserRound, Settings, LogOut, Image, Grid, Edit, MessageSquare, Trash2, Gift } from "lucide-react";
+import { UserRound, Settings, LogOut, Image, Grid, Edit, MessageSquare, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getUserProfile, getUserPosts, deletePost } from "@/lib/api";
@@ -129,14 +128,6 @@ const ProfileComponent = () => {
                 >
                   <MessageSquare size={16} className="mr-2" />
                   Whispers
-                </Button>
-                <Button
-                  variant="outline"
-                  className="text-sm"
-                  onClick={() => navigate("/referrals")}
-                >
-                  <Gift size={16} className="mr-2" />
-                  Refer & Earn
                 </Button>
               </div>
             </div>

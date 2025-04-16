@@ -1,19 +1,12 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getWhisperConversation, sendWhisper } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Loader, User, Trash2, MoreVertical } from "lucide-react";
+import { ArrowLeft, Send, Loader, User } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import AvatarGenerator from "@/components/user/AvatarGenerator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface WhisperConversationProps {
   partnerId: string;
@@ -49,29 +42,6 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
     },
   });
 
-  const deleteMessageMutation = useMutation({
-    mutationFn: async (messageId: string) => {
-      // This would be a real API call in a production app
-      // For now we'll simulate success
-      return new Promise(resolve => setTimeout(() => resolve({ success: true }), 500));
-    },
-    onSuccess: () => {
-      toast({
-        title: "Message deleted",
-        description: "Your message has been removed.",
-      });
-      refetch();
-      queryClient.invalidateQueries({ queryKey: ["whispers"] });
-    },
-    onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Failed to delete message",
-        description: "Please try again later.",
-      });
-    },
-  });
-
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -82,12 +52,6 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
     e.preventDefault();
     if (message.trim()) {
       sendWhisperMutation.mutate(message);
-    }
-  };
-
-  const handleDeleteMessage = (messageId) => {
-    if (window.confirm("Are you sure you want to delete this message?")) {
-      deleteMessageMutation.mutate(messageId);
     }
   };
 
@@ -246,7 +210,7 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
                 return (
                   <div
                     key={msg._id}
-                    className={`flex ${isMe ? "justify-end" : "justify-start"} group relative`}
+                    className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                   >
                     <div
                       className={`
@@ -270,29 +234,6 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
                         {isMe && msg.read && <span className="ml-1">✓</span>}
                       </div>
                     </div>
-                    
-                    {isMe && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 absolute -left-7 top-1"
-                          >
-                            <MoreVertical className="h-4 w-4 text-gray-400" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          <DropdownMenuItem 
-                            className="text-red-500 flex items-center cursor-pointer"
-                            onClick={() => handleDeleteMessage(msg._id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete message
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
                   </div>
                 );
               })}
@@ -303,28 +244,28 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
       </div>
 
       <div className="p-3 bg-undercover-dark sticky bottom-16 z-20 flex items-center justify-between md:bottom-0">
-        <form onSubmit={handleSendMessage} className="flex-1">
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type a message..."
-            className="w-full bg-gray-800 border-none text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-undercover-purple p-2 rounded-lg"
-          />
-        </form>
-        <Button
-          type="submit"
-          size="icon"
-          disabled={!message.trim() || sendWhisperMutation.isPending}
-          onClick={handleSendMessage}
-          className="bg-undercover-purple hover:bg-undercover-deep-purple rounded-full w-12 h-12 ml-2 flex items-center justify-center"
-        >
-          {sendWhisperMutation.isPending ? (
-            <Loader className="h-5 w-5 animate-spin text-white" />
-          ) : (
-            <Send size={16} className="text-white" />
-          )}
-        </Button>
-      </div>
+  <form onSubmit={handleSendMessage} className="flex-1">
+    <Input
+      value={message}
+      onChange={(e) => setMessage(e.target.value)}
+      placeholder="Type a message..."
+      className="w-full bg-gray-800 border-none text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-undercover-purple p-2 rounded-lg"
+    />
+  </form>
+  <Button
+    type="submit"
+    size="icon"
+    disabled={!message.trim() || sendWhisperMutation.isPending}
+    onClick={handleSendMessage}
+    className="bg-undercover-purple hover:bg-undercover-deep-purple rounded-full w-12 h-12 ml-2 flex items-center justify-center"
+  >
+    {sendWhisperMutation.isPending ? (
+      <Loader className="h-5 w-5 animate-spin text-white" />
+    ) : (
+      <Send size={16} className="text-white" />
+    )}
+  </Button>
+</div>
     </div>
   );
 };

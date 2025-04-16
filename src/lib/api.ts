@@ -1,438 +1,251 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import axios from "axios";
-import { PostType, CommentType, UserType, GhostCircleType, WhisperType } from "@/types";
+import axios from 'axios';
+
+// Create axios instance with base URL
+// Use a default API URL that works with the development environment
+const API_URL = 'https://undercover-service.onrender.com';
+// const API_URL = 'http://localhost:8900';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true,
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true, // Ensure credentials (like cookies) are included
 });
 
+// Add a request interceptor to include JWT token in requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Add a response interceptor to handle token expiration or other errors
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      window.location.href = "/login";
-      localStorage.removeItem("user");
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Handle token expiration or unauthorized errors
+      console.log('Unauthorized, handling token refresh or re-login...');
+      // Implement token refresh logic here if you have refresh tokens
+      // Alternatively, trigger a logout action
     }
     return Promise.reject(error);
   }
 );
 
-const handleApiError = (error: any) => {
-  console.error("API Error:", error);
-  if (axios.isAxiosError(error)) {
-    console.error("Detailed Axios Error:", error.response?.data || error.message);
+// Auth API calls
+export const loginUser = async (email: string, password: string) => {
+  const response = await api.post('/api/users/login', { email, password });
+  return response.data;
+};
+
+export const registerUser = async (username: string, fullName: string, email: string, password: string) => {
+  try {
+    console.log('Attempting to register user with:', { username, fullName, email });
+    const response = await api.post('/api/users/register', { username, fullName, email, password });
+    console.log('Registration response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Registration error:', error.response || error);
+    throw new Error(error?.response?.data?.message || 'An error occurred during registration');
   }
 };
 
-// Authentication
-export const loginUser = async (email: string, password: string): Promise<UserType> => {
+export const getUserProfile = async () => {
+  const response = await api.get('/api/users/profile');
+  return response.data;
+};
+
+export const updateUserProfile = async (userData: any) => {
+  const response = await api.put('/api/users/profile', userData);
+  return response.data;
+};
+
+export const addFriend = async (friendUsername: string) => {
+  const response = await api.post('/api/users/friends', { friendUsername });
+  return response.data;
+};
+
+export const searchUsers = async (query: string) => {
   try {
-    const { data } = await api.post("/api/users/login", { email, password });
-    return data;
+    if (!query || query.trim() === '') {
+      return [];
+    }
+    const response = await api.get(`/api/ghost-circles/users/search?q=${encodeURIComponent(query)}`);
+    return response.data;
   } catch (error) {
-    handleApiError(error);
+    console.error('Error searching users:', error);
     throw error;
   }
 };
 
-export const registerUser = async (
-  username: string,
-  fullName: string,
-  email: string,
-  password: string,
-  referralCode?: string
-): Promise<UserType> => {
-  try {
-    const { data } = await api.post("/api/users/register", {
-      username,
-      fullName,
-      email,
-      password,
-      referralCode,
-    });
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
+// Ghost Circles API calls
+export const createGhostCircle = async (name: string, description: string) => {
+  const response = await api.post('/api/ghost-circles', { name, description });
+  return response.data;
 };
 
-// Posts
-export const uploadImage = async (image: File) => {
-  const formData = new FormData();
-  formData.append("image", image);
-
-  try {
-    const { data } = await api.post("/api/upload", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return data.imageUrl;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
+export const getMyGhostCircles = async () => {
+  const response = await api.get('/api/ghost-circles');
+  return response.data;
 };
 
-export const createPost = async (content: string, ghostCircleId?: string, imageUrl?: string) => {
-  try {
-    const { data } = await api.post("/api/posts", { content, ghostCircleId, imageUrl });
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
+export const inviteToGhostCircle = async (circleId: string, friendUsername: string) => {
+  const response = await api.post(`/api/ghost-circles/${circleId}/invite`, { friendUsername });
+  return response.data;
 };
 
-export const getPosts = async (page = 1, limit = 10) => {
-  try {
-    const { data } = await api.get(`/api/posts?page=${page}&limit=${limit}`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
+export const getGhostCirclePosts = async (circleId: string) => {
+  const response = await api.get(`/api/posts/circle/${circleId}`);
+  return response.data;
 };
 
-export const getGlobalFeed = async () => {
-  try {
-    const { data } = await api.get("/api/posts/global");
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const getPostById = async (postId: string) => {
-  try {
-    const { data } = await api.get(`/api/posts/${postId}`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const updatePost = async (
-  postId: string,
+export const createPost = async (
   content: string,
+  ghostCircleId?: string,
   imageUrl?: string
 ) => {
   try {
-    const { data } = await api.put(`/api/posts/${postId}`, { content, imageUrl });
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
+    const postData = {
+      content,
+      ...(ghostCircleId && { ghostCircleId }),
+      ...(imageUrl && { imageUrl }),
+    };
+
+    const response = await api.post('/api/posts', postData);
+    return response.data;
+  } catch (error: any) {
+    console.error('Error creating post:', error);
+    throw error?.response?.data || error;
   }
+};
+
+export const updatePost = async (postId: string, content: string, imageUrl?: string) => {
+  const postData: {
+    content: string;
+    imageUrl?: string;
+  } = { content };
+  
+  if (imageUrl !== undefined) {
+    postData.imageUrl = imageUrl;
+  }
+  
+  const response = await api.put(`/api/posts/${postId}`, postData);
+  return response.data;
 };
 
 export const deletePost = async (postId: string) => {
-  try {
-    const { data } = await api.delete(`/api/posts/${postId}`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
+  const response = await api.delete(`/api/posts/delete/${postId}`);
+  return response.data;
+};
+
+export const getUserPosts = async (userId: string) => {
+  const response = await api.get(`/api/users/userposts/${userId}`);
+  return response.data;
+};
+
+export const getGlobalFeed = async () => {
+  const response = await api.get('/api/posts/global');
+  return response.data;
 };
 
 export const likePost = async (postId: string) => {
-  try {
-    const { data } = await api.post(`/api/posts/${postId}/like`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
+  const response = await api.put(`/api/posts/${postId}/like`);
+  return response.data;
 };
 
-export const unlikePost = async (postId: string) => {
-  try {
-    const { data } = await api.post(`/api/posts/${postId}/unlike`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
+// Comments API calls
+export const addComment = async (postId: string, content: string, anonymousAlias: string) => {
+  const response = await api.post(`/api/posts/${postId}/comments`, { content, anonymousAlias });
+  return response.data;
 };
 
-// Comments
-export const addComment = async (postId: string, text: string, anonymousAlias?: string) => {
-  try {
-    const { data } = await api.post(`/api/posts/${postId}/comments`, { text, anonymousAlias });
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
+export const editComment = async (postId: string, commentId: string, content: string) => {
+  const response = await api.put(`/api/posts/${postId}/comments/${commentId}`, { content });
+  return response.data;
+};
+
+export const deleteComment = async (postId: string, commentId: string) => {
+  const response = await api.delete(`/api/posts/${postId}/comments/${commentId}`);
+  return response.data;
+};
+
+export const replyToComment = async (postId: string, commentId: string, content: string, anonymousAlias: string) => {
+  const response = await api.post(`/api/posts/${postId}/comments/${commentId}/reply`, { content, anonymousAlias });
+  return response.data;
 };
 
 export const getComments = async (postId: string) => {
   try {
-    const { data } = await api.get(`/api/posts/${postId}/comments`);
-    return data;
+    const response = await api.get(`/api/posts/${postId}/comments`);
+    return response.data; // This will return the comments data
   } catch (error) {
-    handleApiError(error);
-    throw error;
+    console.error('Error fetching comments:', error);
+    // Handle errors or return an empty array in case of failure
+    return [];
   }
 };
 
-export const editComment = async (postId: string, commentId: string, text: string) => {
+// Whispers API calls
+export const sendWhisper = async (receiverId: string, content: string) => {
   try {
-    const { data } = await api.put(`/api/posts/${postId}/comments/${commentId}`, { text });
-    return data;
+    const response = await api.post('/api/whispers', { receiverId, content });
+    return response.data;
   } catch (error) {
-    handleApiError(error);
-    throw error;
+    console.error('Error sending whisper:', error);
+    throw error?.response?.data || error;
   }
 };
 
-export const deleteComment = async (postId: string, commentId: string) => {
-  try {
-    const { data } = await api.delete(
-      `/api/posts/${postId}/comments/${commentId}`
-    );
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const replyToComment = async (postId: string, commentId: string, content: string, anonymousAlias?: string) => {
-  try {
-    const { data } = await api.post(`/api/posts/${postId}/comments/${commentId}/replies`, {
-      content,
-      anonymousAlias
-    });
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-// User Profile
-export const getUserProfile = async () => {
-  try {
-    const { data } = await api.get("/api/users/profile");
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const updateUserProfile = async (updates: {
-  fullName?: string;
-  bio?: string;
-  anonymousAlias?: string;
-  avatarEmoji?: string;
-}) => {
-  try {
-    const { data } = await api.put("/api/users/profile", updates);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const getUserPosts = async (userId: string) => {
-  try {
-    const { data } = await api.get(`/api/users/userposts/${userId}`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-// Ghost Circles
-export const getMyGhostCircles = async () => {
-  try {
-    const { data } = await api.get("/api/ghost-circles");
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const createGhostCircle = async (name: string, description: string) => {
-  try {
-    const { data } = await api.post("/api/ghost-circles", { name, description });
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const getGhostCircleById = async (circleId: string) => {
-  try {
-    const { data } = await api.get(`/api/ghost-circles/${circleId}`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const getGhostCirclePosts = async (circleId: string) => {
-  try {
-    const { data } = await api.get(`/api/ghost-circles/${circleId}/posts`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const inviteToGhostCircle = async (circleId: string, username: string) => {
-  try {
-    const { data } = await api.post(`/api/ghost-circles/${circleId}/invite`, { username });
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const joinGhostCircle = async (circleId: string) => {
-  try {
-    const { data } = await api.post(`/api/ghost-circles/${circleId}/join`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-// Whispers
 export const getMyWhispers = async () => {
   try {
-    const { data } = await api.get("/api/whispers");
-    return data;
+    const response = await api.get('/api/whispers');
+    return response.data;
   } catch (error) {
-    handleApiError(error);
-    throw error;
+    console.error('Error fetching whispers:', error);
+    throw error?.response?.data || error;
   }
 };
 
 export const getWhisperConversation = async (userId: string) => {
   try {
-    const { data } = await api.get(`/api/whispers/${userId}`);
-    return data;
+    const response = await api.get(`/api/whispers/${userId}`);
+    return response.data;
   } catch (error) {
-    handleApiError(error);
-    throw error;
+    console.error('Error fetching whisper conversation:', error);
+    throw error?.response?.data || error;
   }
 };
 
-export const sendWhisper = async (receiverId: string, content: string) => {
+// Mark whisper as read
+export const markWhisperAsRead = async (whisperId: string) => {
   try {
-    const { data } = await api.post("/api/whispers", { receiverId, content });
-    return data;
+    const response = await api.put(`/api/whispers/${whisperId}/read`);
+    return response.data;
   } catch (error) {
-    handleApiError(error);
-    throw error;
+    console.error('Error marking whisper as read:', error);
+    throw error?.response?.data || error;
   }
 };
 
-export const deleteWhisperMessage = async (messageId: string) => {
-  try {
-    const { data } = await api.delete(`/api/whispers/${messageId}`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
+// Add new function to join a circle from an invitation
+export const joinGhostCircle = async (circleId: string) => {
+  const response = await api.post(`/api/ghost-circles/${circleId}/join`);
+  return response.data;
 };
 
-// User Search
-export const searchUsers = async (query: string) => {
-  try {
-    const { data } = await api.get(`/api/users/search?q=${query}`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
+// Get circle details by ID
+export const getGhostCircleById = async (circleId: string) => {
+  const response = await api.get(`/api/ghost-circles/${circleId}`);
+  return response.data;
 };
 
-// Recognition
-export const recognizeUser = async (targetUserId: string) => {
-  try {
-    const { data } = await api.post("/api/users/recognize", { targetUserId });
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const revokeRecognition = async (targetUserId: string) => {
-   try {
-    const { data } = await api.post("/api/users/revoke-recognition", { targetUserId });
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const leaveCompliment = async (targetUserId: string, text: string) => {
-  try {
-    const { data } = await api.post("/api/users/compliment", { targetUserId, text });
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const getRecognitionStats = async () => {
-  try {
-    const { data } = await api.get("/api/users/recognition-stats");
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const challengeUser = async (targetUserId: string) => {
-  try {
-    const { data } = await api.post("/api/users/challenge", { targetUserId });
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-// Referrals
-export const getReferralInfo = async () => {
-  try {
-    const { data } = await api.get("/api/referrals/info");
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-export const claimReferralReward = async (rewardId: string) => {
-  try {
-    const { data } = await api.post(`/api/referrals/claim/${rewardId}`);
-    return data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
+export default api;
