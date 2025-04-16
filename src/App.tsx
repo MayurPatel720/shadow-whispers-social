@@ -15,6 +15,7 @@ import ProfilePage from "./pages/ProfilePage";
 import GhostCircles from "./pages/GhostCircles";
 import AppShell from "./components/layout/AppShell";
 import InvitePage from "./pages/InvitePage";
+import ReferralPage from "./pages/ReferralPage";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,16 @@ const App = () => (
                 <ProtectedRoute>
                   <AppShell>
                     <GhostCircles />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/referrals"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <ReferralPage />
                   </AppShell>
                 </ProtectedRoute>
               }
