@@ -1,12 +1,4 @@
-
-export interface ReferralProgram {
-  referralCode: string;
-  referralsCount: number;
-  tiers: ReferralTier[];
-  rewards: RewardHistory[];
-  leaderboardPosition?: number;
-}
-
+// src/types/referral.ts
 export interface ReferralTier {
   level: number;
   requiredReferrals: number;
@@ -14,23 +6,24 @@ export interface ReferralTier {
   rewardDescription: string;
   rewardIcon: string;
   isUnlocked: boolean;
+  isClaimed?: boolean; // Added for enhancedTiers
 }
 
 export interface RewardHistory {
-  id: string;
-  tierId: number;
+  tierLevel: number; // Matches backend (userController.js)
   rewardType: 'badge' | 'cash' | 'premium';
   rewardDescription: string;
-  dateAwarded: string;
-  redeemed: boolean;
+  status: 'pending' | 'completed'; // Matches backend
+  claimedAt: string; // ISO date string
+  paymentDetails?: string; // For cash rewards (Razorpay order ID)
 }
 
-export interface LeaderboardEntry {
-  position: number;
-  anonymousAlias: string;
-  avatarEmoji: string;
+export interface ReferralProgram {
+  referralCode: string;
   referralsCount: number;
-  userId: string;
+  tiers: ReferralTier[];
+  claimedRewards: RewardHistory[]; // Renamed from rewards for clarity
+  leaderboardPosition?: number;
 }
 
 export interface ReferralStats {
@@ -41,4 +34,10 @@ export interface ReferralStats {
   currentTier: number;
 }
 
-export type PaymentMethod = 'paypal' | 'venmo' | 'giftcard';
+export interface LeaderboardEntry {
+  position: number;
+  anonymousAlias: string;
+  avatarEmoji: string;
+  referralsCount: number;
+  userId: string;
+}

@@ -1,25 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginUser, registerUser, getUserProfile, updateUserProfile } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
-
-interface User {
-  [x: string]: string;
-  _id: string;
-  username: string;
-  fullName: string;
-  email: string;
-  anonymousAlias: string;
-  avatarEmoji: string;
-  bio?: string;
-}
+import { User } from '@/types/user'; // Import shared User type
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, fullName: string, email: string, password: string) => Promise<void>;
+  register: (username: string, fullName: string, email: string, password: string, referralCode?: string) => Promise<void>;
   logout: () => void;
   updateProfile: (userData: Partial<User>) => Promise<void>;
 }
@@ -56,53 +48,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem('token', data.token);
       setUser(data);
       toast({
-        title: "Login successful",
+        title: 'Login successful',
         description: `Welcome back, ${data.username}!`,
       });
       navigate('/');
     } catch (error: any) {
       console.error('Login failed', error);
       toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: error.response?.data?.message || "Invalid email or password",
+        variant: 'destructive',
+        title: 'Login failed',
+        description: error.response?.data?.message || 'Invalid email or password',
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (username: string, fullName: string, email: string, password: string) => {
+  const register = async (username: string, fullName: string, email: string, password: string, referralCode?: string) => {
     try {
       setIsLoading(true);
-      console.log('Registering user with data:', { username, fullName, email });
-      const data = await registerUser(username, fullName, email, password);
+      console.log('Registering user with data:', { username, fullName, email, referralCode });
+      const data = await registerUser(username, fullName, email, password, referralCode);
       console.log('Registration successful, data received:', data);
-      
+
       localStorage.setItem('token', data.token);
       setUser(data);
       toast({
-        title: "Registration successful",
+        title: 'Registration successful',
         description: `Welcome, ${data.anonymousAlias}! Your anonymous identity has been created.`,
       });
+      if (referralCode) {
+        toast({
+          title: 'Referral Applied',
+          description: 'The referral code has been successfully applied.',
+        });
+      }
       navigate('/');
     } catch (error: any) {
       console.error('Registration failed', error);
-      
-      let errorMessage = "Registration failed";
+
+      let errorMessage = 'Registration failed';
       if (error.response) {
-        errorMessage = error.response.data?.message || "Server error: " + error.response.status;
+        errorMessage = error.response.data?.message || 'Server error: ' + error.response.status;
       } else if (error.request) {
-        errorMessage = "No response from server. Please check your connection.";
+        errorMessage = 'No response from server. Please check your connection.';
       } else {
-        errorMessage = error.message || "Unknown error occurred";
+        errorMessage = error.message || 'Unknown error occurred';
       }
-      
+
       toast({
-        variant: "destructive",
-        title: "Registration failed",
+        variant: 'destructive',
+        title: 'Registration failed',
         description: errorMessage,
       });
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -112,18 +111,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setIsLoading(true);
       const updatedUser = await updateUserProfile(userData);
-      setUser(prev => prev ? { ...prev, ...updatedUser } : null);
+      setUser(prev => (prev ? { ...prev, ...updatedUser } : null));
       toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully",
+        title: 'Profile updated',
+        description: 'Your profile has been updated successfully',
       });
-      return updatedUser;
+      return;
     } catch (error: any) {
       console.error('Update profile failed', error);
       toast({
-        variant: "destructive",
-        title: "Update failed",
-        description: error.response?.data?.message || "Failed to update profile",
+        variant: 'destructive',
+        title: 'Update failed',
+        description: error.response?.data?.message || 'Failed to update profile',
       });
       throw error;
     } finally {
@@ -135,8 +134,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem('token');
     setUser(null);
     toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
+      title: 'Logged out',
+      description: 'You have been successfully logged out.',
     });
     navigate('/login');
   };

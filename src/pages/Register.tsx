@@ -1,4 +1,5 @@
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// components/Register.tsx
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -11,7 +12,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, AtSign, KeyRound, Eye, EyeOff, UserPlus, Mail, Lock, Gift } from 'lucide-react';
-import { processReferral } from '@/lib/api-referral';
 import { useToast } from '@/hooks/use-toast';
 
 const registerSchema = z.object({
@@ -39,7 +39,7 @@ const Register: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   // Extract referral code from URL
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -48,7 +48,7 @@ const Register: React.FC = () => {
       setReferralCode(code);
     }
   }, [location.search]);
-  
+
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -71,41 +71,13 @@ const Register: React.FC = () => {
 
   const onSubmit = async (data: RegisterFormValues) => {
     try {
-      // Register the user
-      const newUser = await registerUser(data.username, data.fullName, data.email, data.password);
-      
-      // Process referral code if provided
-      if (data.referralCode) {
-        const referralSuccess = await processReferral(data.referralCode);
-        
-        if (referralSuccess) {
-          toast({
-            title: "Referral Applied",
-            description: "The referral code has been successfully applied.",
-          });
-          
-          // Store the new user in allUsers for the referral system
-          const allUsers = JSON.parse(localStorage.getItem('allUsers') || '[]');
-          allUsers.push(newUser);
-          localStorage.setItem('allUsers', JSON.stringify(allUsers));
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Invalid Referral Code",
-            description: "The referral code could not be processed.",
-          });
-        }
-      }
-      
-      // Redirect to home page after successful registration
+      // Register the user (referral processing is handled backend-side)
+      await registerUser(data.username, data.fullName, data.email, data.password, data.referralCode);
+      // Toasts are handled in AuthContext
       navigate('/');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
-      toast({
-        variant: "destructive",
-        title: "Registration Failed",
-        description: "Could not create your account. Please try again.",
-      });
+      // Toast is handled in AuthContext
     }
   };
 
@@ -120,7 +92,7 @@ const Register: React.FC = () => {
           </div>
         )}
       </div>
-      
+
       <Card className="w-full max-w-md border-purple-700/50 bg-black/40 backdrop-blur-md text-gray-100 shadow-xl">
         <CardHeader className="space-y-2 text-center border-b border-purple-800/30 pb-6">
           <CardTitle className="text-2xl font-bold text-purple-400">Create Your Mask</CardTitle>
@@ -140,10 +112,10 @@ const Register: React.FC = () => {
                     <FormControl>
                       <div className="relative">
                         <AtSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400" size={18} />
-                        <Input 
-                          placeholder="Choose a unique username" 
-                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5" 
-                          {...field} 
+                        <Input
+                          placeholder="Choose a unique username"
+                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5"
+                          {...field}
                         />
                       </div>
                     </FormControl>
@@ -151,7 +123,7 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="fullName"
@@ -161,10 +133,10 @@ const Register: React.FC = () => {
                     <FormControl>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400" size={18} />
-                        <Input 
-                          placeholder="Your real name (will be encrypted)" 
-                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5" 
-                          {...field} 
+                        <Input
+                          placeholder="Your real name (will be encrypted)"
+                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5"
+                          {...field}
                         />
                       </div>
                     </FormControl>
@@ -175,7 +147,7 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="email"
@@ -185,10 +157,10 @@ const Register: React.FC = () => {
                     <FormControl>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400" size={18} />
-                        <Input 
-                          placeholder="your.email@example.com" 
-                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5" 
-                          {...field} 
+                        <Input
+                          placeholder="your.email@example.com"
+                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5"
+                          {...field}
                         />
                       </div>
                     </FormControl>
@@ -196,7 +168,7 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="password"
@@ -206,11 +178,11 @@ const Register: React.FC = () => {
                     <FormControl>
                       <div className="relative">
                         <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400" size={18} />
-                        <Input 
+                        <Input
                           type={showPassword ? "text" : "password"}
-                          placeholder="••••••••" 
-                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5" 
-                          {...field} 
+                          placeholder="••••••••"
+                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5"
+                          {...field}
                         />
                         <Button
                           type="button"
@@ -227,7 +199,7 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="confirmPassword"
@@ -237,11 +209,11 @@ const Register: React.FC = () => {
                     <FormControl>
                       <div className="relative">
                         <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400" size={18} />
-                        <Input 
+                        <Input
                           type={showConfirmPassword ? "text" : "password"}
-                          placeholder="••••••••" 
-                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5" 
-                          {...field} 
+                          placeholder="••••••••"
+                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5"
+                          {...field}
                         />
                         <Button
                           type="button"
@@ -258,7 +230,7 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="referralCode"
@@ -268,10 +240,10 @@ const Register: React.FC = () => {
                     <FormControl>
                       <div className="relative">
                         <Gift className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-400" size={18} />
-                        <Input 
-                          placeholder="Enter referral code" 
-                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5" 
-                          {...field} 
+                        <Input
+                          placeholder="Enter referral code"
+                          className="bg-gray-900/60 border-purple-800/50 pl-10 py-5"
+                          {...field}
                           value={field.value || ''}
                         />
                       </div>
@@ -283,7 +255,7 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="isAdult"
@@ -308,10 +280,10 @@ const Register: React.FC = () => {
                   </FormItem>
                 )}
               />
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-purple-600 hover:bg-purple-700 py-6 text-lg font-medium mt-6" 
+
+              <Button
+                type="submit"
+                className="w-full bg-purple-600 hover:bg-purple-700 py-6 text-lg font-medium mt-6"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -341,7 +313,7 @@ const Register: React.FC = () => {
           </p>
         </CardFooter>
       </Card>
-      
+
       <div className="text-center mt-8 text-gray-400 text-sm">
         <p>Your true identity stays hidden. Your shadow self roams free.</p>
       </div>

@@ -78,7 +78,7 @@ const WhispersPage = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] md:h-screen">
       <div className="flex-1 flex flex-col md:flex-row">
-        <div className={`md:w-1/3 border-r border-border flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`md:w-1/3 max-w-md border-r border-border flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-border">
             <h2 className="text-lg font-semibold text-undercover-light-purple">Whispers</h2>
             <p className="text-sm text-muted-foreground">Anonymous messages</p>

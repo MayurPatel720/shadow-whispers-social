@@ -1,18 +1,18 @@
+// lib/api-client.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
 import axios from 'axios';
+import { User ,Post } from '@/types/user';
 
 // Create axios instance with base URL
-// Use a default API URL that works with the development environment
-const API_URL = 'https://undercover-service.onrender.com';
-// const API_URL = 'http://localhost:8900';
+const API_URL = 'http://localhost:8900';
+// const API_URL = 'https://undercover-service.onrender.com';
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // Ensure credentials (like cookies) are included
+  withCredentials: true,
 });
 
 // Add a request interceptor to include JWT token in requests
@@ -32,7 +32,6 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Handle token expiration or unauthorized errors
       console.log('Unauthorized, handling token refresh or re-login...');
       // Implement token refresh logic here if you have refresh tokens
       // Alternatively, trigger a logout action
@@ -42,39 +41,51 @@ api.interceptors.response.use(
 );
 
 // Auth API calls
-export const loginUser = async (email: string, password: string) => {
+export const loginUser = async (email: string, password: string): Promise<User & { token: string }> => {
   const response = await api.post('/api/users/login', { email, password });
   return response.data;
 };
 
-export const registerUser = async (username: string, fullName: string, email: string, password: string) => {
+export const registerUser = async (
+  username: string,
+  fullName: string,
+  email: string,
+  password: string,
+  referralCode?: string
+): Promise<User & { token: string }> => {
   try {
-    console.log('Attempting to register user with:', { username, fullName, email });
-    const response = await api.post('/api/users/register', { username, fullName, email, password });
+    console.log('Attempting to register user with:', { username, fullName, email, referralCode });
+    const response = await api.post('/api/users/register', {
+      username,
+      fullName,
+      email,
+      password,
+      referralCode,
+    });
     console.log('Registration response:', response.data);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration error:', error.response || error);
     throw new Error(error?.response?.data?.message || 'An error occurred during registration');
   }
 };
 
-export const getUserProfile = async () => {
+export const getUserProfile = async (): Promise<User> => {
   const response = await api.get('/api/users/profile');
   return response.data;
 };
 
-export const updateUserProfile = async (userData: any) => {
+export const updateUserProfile = async (userData: Partial<User>): Promise<User> => {
   const response = await api.put('/api/users/profile', userData);
   return response.data;
 };
 
-export const addFriend = async (friendUsername: string) => {
+export const addFriend = async (friendUsername: string): Promise<User> => {
   const response = await api.post('/api/users/friends', { friendUsername });
   return response.data;
 };
 
-export const searchUsers = async (query: string) => {
+export const searchUsers = async (query: string): Promise<User[]> => {
   try {
     if (!query || query.trim() === '') {
       return [];
@@ -88,38 +99,33 @@ export const searchUsers = async (query: string) => {
 };
 
 // Ghost Circles API calls
-export const createGhostCircle = async (name: string, description: string) => {
+export const createGhostCircle = async (name: string, description: string): Promise<any> => {
   const response = await api.post('/api/ghost-circles', { name, description });
   return response.data;
 };
 
-export const getMyGhostCircles = async () => {
+export const getMyGhostCircles = async (): Promise<any[]> => {
   const response = await api.get('/api/ghost-circles');
   return response.data;
 };
 
-export const inviteToGhostCircle = async (circleId: string, friendUsername: string) => {
+export const inviteToGhostCircle = async (circleId: string, friendUsername: string): Promise<any> => {
   const response = await api.post(`/api/ghost-circles/${circleId}/invite`, { friendUsername });
   return response.data;
 };
 
-export const getGhostCirclePosts = async (circleId: string) => {
+export const getGhostCirclePosts = async (circleId: string): Promise<Post[]> => {
   const response = await api.get(`/api/posts/circle/${circleId}`);
   return response.data;
 };
 
-export const createPost = async (
-  content: string,
-  ghostCircleId?: string,
-  imageUrl?: string
-) => {
+export const createPost = async (content: string, ghostCircleId?: string, imageUrl?: string): Promise<Post> => {
   try {
     const postData = {
       content,
       ...(ghostCircleId && { ghostCircleId }),
       ...(imageUrl && { imageUrl }),
     };
-
     const response = await api.post('/api/posts', postData);
     return response.data;
   } catch (error: any) {
@@ -128,74 +134,66 @@ export const createPost = async (
   }
 };
 
-export const updatePost = async (postId: string, content: string, imageUrl?: string) => {
-  const postData: {
-    content: string;
-    imageUrl?: string;
-  } = { content };
-  
+export const updatePost = async (postId: string, content: string, imageUrl?: string): Promise<Post> => {
+  const postData: { content: string; imageUrl?: string } = { content };
   if (imageUrl !== undefined) {
     postData.imageUrl = imageUrl;
   }
-  
   const response = await api.put(`/api/posts/${postId}`, postData);
   return response.data;
 };
 
-export const deletePost = async (postId: string) => {
-  const response = await api.delete(`/api/posts/delete/${postId}`);
-  return response.data;
+export const deletePost = async (postId: string): Promise<void> => {
+  await api.delete(`/api/posts/${postId}`);
 };
 
-export const getUserPosts = async (userId: string) => {
+export const getUserPosts = async (userId: string): Promise<Post[]> => {
   const response = await api.get(`/api/users/userposts/${userId}`);
   return response.data;
 };
 
-export const getGlobalFeed = async () => {
+export const getGlobalFeed = async (): Promise<Post[]> => {
   const response = await api.get('/api/posts/global');
   return response.data;
 };
 
-export const likePost = async (postId: string) => {
+export const likePost = async (postId: string): Promise<Post> => {
   const response = await api.put(`/api/posts/${postId}/like`);
   return response.data;
 };
 
 // Comments API calls
-export const addComment = async (postId: string, content: string, anonymousAlias: string) => {
+export const addComment = async (postId: string, content: string, anonymousAlias: string): Promise<any> => {
   const response = await api.post(`/api/posts/${postId}/comments`, { content, anonymousAlias });
   return response.data;
 };
 
-export const editComment = async (postId: string, commentId: string, content: string) => {
+export const editComment = async (postId: string, commentId: string, content: string): Promise<any> => {
   const response = await api.put(`/api/posts/${postId}/comments/${commentId}`, { content });
   return response.data;
 };
 
-export const deleteComment = async (postId: string, commentId: string) => {
-  const response = await api.delete(`/api/posts/${postId}/comments/${commentId}`);
-  return response.data;
+export const deleteComment = async (postId: string, commentId: string): Promise<void> => {
+  await api.delete(`/api/posts/${postId}/comments/${commentId}`);
 };
 
-export const replyToComment = async (postId: string, commentId: string, content: string, anonymousAlias: string) => {
+export const replyToComment = async (postId: string, commentId: string, content: string, anonymousAlias: string): Promise<any> => {
   const response = await api.post(`/api/posts/${postId}/comments/${commentId}/reply`, { content, anonymousAlias });
   return response.data;
 };
 
-export const getComments = async (postId: string) => {
+export const getComments = async (postId: string): Promise<any[]> => {
   try {
     const response = await api.get(`/api/posts/${postId}/comments`);
-    return response.data; // This will return the comments data
+    return response.data;
   } catch (error) {
     console.error('Error fetching comments:', error);
-    // Handle errors or return an empty array in case of failure
     return [];
   }
 };
 
 // Whispers API calls
-export const sendWhisper = async (receiverId: string, content: string) => {
+export const sendWhisper = async (receiverId: string, content: string): Promise<any> => {
   try {
     const response = await api.post('/api/whispers', { receiverId, content });
     return response.data;
@@ -205,7 +203,7 @@ export const sendWhisper = async (receiverId: string, content: string) => {
   }
 };
 
-export const getMyWhispers = async () => {
+export const getMyWhispers = async (): Promise<any[]> => {
   try {
     const response = await api.get('/api/whispers');
     return response.data;
@@ -215,7 +213,7 @@ export const getMyWhispers = async () => {
   }
 };
 
-export const getWhisperConversation = async (userId: string) => {
+export const getWhisperConversation = async (userId: string): Promise<any> => {
   try {
     const response = await api.get(`/api/whispers/${userId}`);
     return response.data;
@@ -225,8 +223,7 @@ export const getWhisperConversation = async (userId: string) => {
   }
 };
 
-// Mark whisper as read
-export const markWhisperAsRead = async (whisperId: string) => {
+export const markWhisperAsRead = async (whisperId: string): Promise<any> => {
   try {
     const response = await api.put(`/api/whispers/${whisperId}/read`);
     return response.data;
@@ -237,15 +234,13 @@ export const markWhisperAsRead = async (whisperId: string) => {
 };
 
 // Add new function to join a circle from an invitation
-export const joinGhostCircle = async (circleId: string) => {
+export const joinGhostCircle = async (circleId: string): Promise<any> => {
   const response = await api.post(`/api/ghost-circles/${circleId}/join`);
   return response.data;
 };
 
 // Get circle details by ID
-export const getGhostCircleById = async (circleId: string) => {
+export const getGhostCircleById = async (circleId: string): Promise<any> => {
   const response = await api.get(`/api/ghost-circles/${circleId}`);
   return response.data;
 };
-
-export default api;
