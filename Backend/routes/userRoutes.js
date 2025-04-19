@@ -1,3 +1,4 @@
+
 // routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
@@ -11,7 +12,10 @@ const {
   processReferral,
   claimReward,
   verifyPayment,
-  getReferralLeaderboard
+  getReferralLeaderboard,
+  recognizeUser,
+  getRecognitions,
+  revokeRecognition
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -26,5 +30,10 @@ router.get('/profile', protect, getUserProfile);
 router.post('/verify-payment', protect, verifyPayment);
 router.put('/profile', protect, updateUserProfile);
 router.post('/friends', protect, addFriend);
+
+// New recognition routes
+router.post('/recognize', protect, recognizeUser);
+router.get('/recognitions', protect, getRecognitions);
+router.post('/revoke-recognition', protect, revokeRecognition);
 
 module.exports = router;

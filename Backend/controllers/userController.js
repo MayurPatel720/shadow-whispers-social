@@ -114,6 +114,172 @@ const loginUser = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get user profile
+// @route   GET /api/users/profile
+// @access  Private
+const getUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select('-password');
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  res.json({
+    _id: user._id,
+    username: user.username,
+    fullName: user.fullName,
+    email: user.email,
+    anonymousAlias: user.anonymousAlias,
+    avatarEmoji: user.avatarEmoji,
+    bio: user.bio,
+    referralCount: user.referralCount,
+    friends: user.friends,
+    recognizedUsers: user.recognizedUsers,
+    identityRecognizers: user.identityRecognizers,
+    claimedRewards: user.claimedRewards,
+  });
+});
+
+// @desc    Update user profile
+// @route   PUT /api/users/profile
+// @access  Private
+const updateUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  if (req.body.bio !== undefined) user.bio = req.body.bio;
+
+  const updatedUser = await user.save();
+  res.json({
+    _id: updatedUser._id,
+    username: updatedUser.username,
+    fullName: updatedUser.fullName,
+    email: updatedUser.email,
+    anonymousAlias: updatedUser.anonymousAlias,
+    avatarEmoji: updatedUser.avatarEmoji,
+    bio: updatedUser.bio,
+    referralCount: updatedUser.referralCount,
+  });
+});
+
+// @desc    Add friend by username
+// @route   POST /api/users/friends
+// @access  Private
+const addFriend = asyncHandler(async (req, res) => {
+  const { friendUsername } = req.body;
+
+  if (!friendUsername) {
+    res.status(400);
+    throw new Error('Please provide a friend username');
+  }
+
+  const friend = await User.findOne({ username: friendUsername });
+  if (!friend) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  if (friend._id.toString() === req.user._id.toString()) {
+    res.status(400);
+    throw new Error('You cannot add yourself as a friend');
+  }
+
+  const user = await User.findById(req.user._id);
+  if (user.friends.includes(friend._id)) {
+    res.status(400);
+    throw new Error('You are already friends with this user');
+  }
+
+  user.friends.push(friend._id);
+  friend.friends.push(user._id);
+  await user.save();
+  await friend.save();
+
+  res.status(200).json({ message: 'Friend added successfully' });
+});
+
+// @desc    Get user's own posts
+// @route   GET /api/users/userposts/:userId
+// @access  Private
+const getOwnPosts = asyncHandler(async (req, res) => {
+  const userId = req.params.userId;
+
+  const posts = await Post.find({ user: userId })
+    .sort({ createdAt: -1 })
+    .populate('likes.user', 'username')
+    .populate('comments.user', 'username');
+
+  res.status(200).json(posts);
+});
+
+// @desc    Process referral
+// @route   POST /api/users/process-referral
+// @access  Public
+const processReferral = asyncHandler(async (req, res) => {
+  const { referralCode, referredUserId } = req.body;
+
+  if (!referralCode || !referredUserId) {
+    res.status(400);
+    throw new Error('Referral code and referred user ID are required');
+  }
+
+  const referredUser = await User.findById(referredUserId);
+  if (!referredUser) {
+    res.status(404);
+    throw new Error('Referred user not found');
+  }
+
+  if (referredUser.referredBy) {
+    res.status(400);
+    throw new Error('User already referred');
+  }
+
+  const referrer = await User.findOne({ referralCode });
+  if (!referrer) {
+    res.status(404);
+    throw new Error('Invalid referral code');
+  }
+
+  if (referrer._id.toString() === referredUserId) {
+    res.status(400);
+    throw new Error('Cannot refer yourself');
+  }
+
+  referrer.referralCount = (referrer.referralCount || 0) + 1;
+  referredUser.referredBy = referrer._id;
+  await referrer.save();
+  await referredUser.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Referral processed successfully',
+  });
+});
+
+// @desc    Get referral leaderboard
+// @route   GET /api/users/referral-leaderboard
+// @access  Public
+const getReferralLeaderboard = asyncHandler(async (req, res) => {
+  const users = await User.find({}, '_id anonymousAlias avatarEmoji referralCount');
+  const leaderboardEntries = users
+    .map((user) => ({
+      userId: user._id.toString(),
+      anonymousAlias: user.anonymousAlias,
+      avatarEmoji: user.avatarEmoji,
+      referralsCount: user.referralCount || 0,
+    }))
+    .sort((a, b) => b.referralsCount - a.referralsCount)
+    .slice(0, 10)
+    .map((entry, index) => ({
+      ...entry,
+      position: index + 1,
+    }));
+
+  res.status(200).json(leaderboardEntries);
+});
+
 // @desc    Claim reward
 // @route   POST /api/users/claim-reward
 // @access  Private
@@ -307,170 +473,188 @@ const verifyPayment = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Payment verified and reward processed' });
 });
 
-// @desc    Process referral
-// @route   POST /api/users/process-referral
-// @access  Public
-const processReferral = asyncHandler(async (req, res) => {
-  const { referralCode, referredUserId } = req.body;
-
-  if (!referralCode || !referredUserId) {
+// @desc    Recognize a user's identity
+// @route   POST /api/users/recognize
+// @access  Private
+const recognizeUser = asyncHandler(async (req, res) => {
+  const { targetUserId, guessedIdentity } = req.body;
+  
+  if (!targetUserId || !guessedIdentity) {
     res.status(400);
-    throw new Error('Referral code and referred user ID are required');
+    throw new Error('Please provide both target user ID and guessed identity');
   }
 
-  const referredUser = await User.findById(referredUserId);
-  if (!referredUser) {
+  // Check if target user exists
+  const targetUser = await User.findById(targetUserId);
+  if (!targetUser) {
     res.status(404);
-    throw new Error('Referred user not found');
+    throw new Error('Target user not found');
   }
 
-  if (referredUser.referredBy) {
+  // Prevent self-recognition
+  if (targetUser._id.toString() === req.user._id.toString()) {
     res.status(400);
-    throw new Error('User already referred');
+    throw new Error('You cannot recognize yourself');
   }
 
-  const referrer = await User.findOne({ referralCode });
-  if (!referrer) {
+  // Get current user
+  const currentUser = await User.findById(req.user._id);
+  
+  // Check if user has already recognized this target
+  if (currentUser.recognizedUsers.includes(targetUserId)) {
+    res.status(400);
+    throw new Error('You have already recognized this user');
+  }
+
+  // Check if recognition was previously revoked
+  if (currentUser.recognitionRevocations.includes(targetUserId)) {
+    res.status(400);
+    throw new Error('You cannot re-recognize a user after revoking');
+  }
+
+  // Increment recognition attempts
+  currentUser.recognitionAttempts += 1;
+
+  // Verify if the guess is correct (matches username)
+  const isCorrect = targetUser.username === guessedIdentity.trim();
+
+  if (isCorrect) {
+    // Add target to current user's recognized list
+    currentUser.recognizedUsers.push(targetUserId);
+    currentUser.successfulRecognitions += 1;
+    
+    // Add current user to target's recognizers list
+    targetUser.identityRecognizers.push(req.user._id);
+    
+    await targetUser.save();
+    await currentUser.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Recognition successful',
+      recognitionRate: Math.round((currentUser.successfulRecognitions / currentUser.recognitionAttempts) * 100)
+    });
+  } else {
+    await currentUser.save();
+    
+    res.status(200).json({
+      success: false,
+      message: 'Recognition failed. The identity you guessed is incorrect.',
+      recognitionRate: Math.round((currentUser.successfulRecognitions / currentUser.recognitionAttempts) * 100)
+    });
+  }
+});
+
+// @desc    Get user's recognitions
+// @route   GET /api/users/recognitions
+// @access  Private
+const getRecognitions = asyncHandler(async (req, res) => {
+  const { type = 'all', filter = 'all' } = req.query;
+  
+  const user = await User.findById(req.user._id)
+    .populate('recognizedUsers', 'username anonymousAlias avatarEmoji')
+    .populate('identityRecognizers', 'username anonymousAlias avatarEmoji');
+  
+  if (!user) {
     res.status(404);
-    throw new Error('Invalid referral code');
+    throw new Error('User not found');
   }
 
-  if (referrer._id.toString() === referredUserId) {
+  let recognized = user.recognizedUsers || [];
+  let recognizers = user.identityRecognizers || [];
+
+  // Apply filters
+  if (filter === 'mutual') {
+    const recognizedIds = recognized.map(r => r._id.toString());
+    const recognizerIds = recognizers.map(r => r._id.toString());
+    
+    recognized = recognized.filter(r => recognizerIds.includes(r._id.toString()));
+    recognizers = recognizers.filter(r => recognizedIds.includes(r._id.toString()));
+  }
+  
+  // Calculate recognition rate
+  const recognitionRate = user.recognitionAttempts > 0
+    ? Math.round((user.successfulRecognitions / user.recognitionAttempts) * 100)
+    : 0;
+  
+  const response = {
+    stats: {
+      recognitionRate,
+      totalRecognized: user.recognizedUsers?.length || 0,
+      totalRecognizers: user.identityRecognizers?.length || 0,
+      successfulRecognitions: user.successfulRecognitions || 0,
+      recognitionAttempts: user.recognitionAttempts || 0
+    }
+  };
+  
+  // Return requested data based on type
+  if (type === 'all' || type === 'recognized') {
+    response.recognized = recognized;
+  }
+  
+  if (type === 'all' || type === 'recognizers') {
+    response.recognizers = recognizers;
+  }
+  
+  res.status(200).json(response);
+});
+
+// @desc    Revoke a recognition
+// @route   POST /api/users/revoke-recognition
+// @access  Private
+const revokeRecognition = asyncHandler(async (req, res) => {
+  const { targetUserId } = req.body;
+  
+  if (!targetUserId) {
     res.status(400);
-    throw new Error('Cannot refer yourself');
+    throw new Error('Please provide target user ID');
   }
 
-  referrer.referralCount = (referrer.referralCount || 0) + 1;
-  referredUser.referredBy = referrer._id;
-  await referrer.save();
-  await referredUser.save();
-
+  // Get current user
+  const currentUser = await User.findById(req.user._id);
+  if (!currentUser) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  
+  // Check if user has recognized this target
+  if (!currentUser.recognizedUsers.includes(targetUserId)) {
+    res.status(400);
+    throw new Error('You have not recognized this user');
+  }
+  
+  // Get target user
+  const targetUser = await User.findById(targetUserId);
+  if (!targetUser) {
+    res.status(404);
+    throw new Error('Target user not found');
+  }
+  
+  // Remove target from current user's recognized list
+  currentUser.recognizedUsers = currentUser.recognizedUsers.filter(
+    id => id.toString() !== targetUserId
+  );
+  
+  // Remove current user from target's recognizers list
+  targetUser.identityRecognizers = targetUser.identityRecognizers.filter(
+    id => id.toString() !== req.user._id.toString()
+  );
+  
+  // Add to revocation lists to prevent re-recognition
+  currentUser.recognitionRevocations.push(targetUserId);
+  
+  // Decrement successful recognitions
+  if (currentUser.successfulRecognitions > 0) {
+    currentUser.successfulRecognitions -= 1;
+  }
+  
+  await targetUser.save();
+  await currentUser.save();
+  
   res.status(200).json({
     success: true,
-    message: 'Referral processed successfully',
+    message: 'Recognition revoked successfully'
   });
-});
-
-// @desc    Get referral leaderboard
-// @route   GET /api/users/referral-leaderboard
-// @access  Public
-const getReferralLeaderboard = asyncHandler(async (req, res) => {
-  const users = await User.find({}, '_id anonymousAlias avatarEmoji referralCount');
-  const leaderboardEntries = users
-    .map((user) => ({
-      userId: user._id.toString(),
-      anonymousAlias: user.anonymousAlias,
-      avatarEmoji: user.avatarEmoji,
-      referralsCount: user.referralCount || 0,
-    }))
-    .sort((a, b) => b.referralsCount - a.referralsCount)
-    .slice(0, 10)
-    .map((entry, index) => ({
-      ...entry,
-      position: index + 1,
-    }));
-
-  res.status(200).json(leaderboardEntries);
-});
-
-// @desc    Get user's own posts
-// @route   GET /api/users/userposts/:userId
-// @access  Private
-const getOwnPosts = asyncHandler(async (req, res) => {
-  const userId = req.params.userId;
-
-  const posts = await Post.find({ user: userId })
-    .sort({ createdAt: -1 })
-    .populate('likes.user', 'username')
-    .populate('comments.user', 'username');
-
-  res.status(200).json(posts);
-});
-
-// @desc    Get user profile
-// @route   GET /api/users/profile
-// @access  Private
-const getUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select('-password');
-  if (!user) {
-    res.status(404);
-    throw new Error('User not found');
-  }
-  res.json({
-    _id: user._id,
-    username: user.username,
-    fullName: user.fullName,
-    email: user.email,
-    anonymousAlias: user.anonymousAlias,
-    avatarEmoji: user.avatarEmoji,
-    bio: user.bio,
-    referralCount: user.referralCount,
-    friends: user.friends,
-    recognizedUsers: user.recognizedUsers,
-    identityRecognizers: user.identityRecognizers,
-    claimedRewards: user.claimedRewards,
-  });
-});
-
-// @desc    Update user profile
-// @route   PUT /api/users/profile
-// @access  Private
-const updateUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
-  if (!user) {
-    res.status(404);
-    throw new Error('User not found');
-  }
-
-  if (req.body.bio !== undefined) user.bio = req.body.bio;
-
-  const updatedUser = await user.save();
-  res.json({
-    _id: updatedUser._id,
-    username: updatedUser.username,
-    fullName: updatedUser.fullName,
-    email: updatedUser.email,
-    anonymousAlias: updatedUser.anonymousAlias,
-    avatarEmoji: updatedUser.avatarEmoji,
-    bio: updatedUser.bio,
-    referralCount: updatedUser.referralCount,
-  });
-});
-
-// @desc    Add friend by username
-// @route   POST /api/users/friends
-// @access  Private
-const addFriend = asyncHandler(async (req, res) => {
-  const { friendUsername } = req.body;
-
-  if (!friendUsername) {
-    res.status(400);
-    throw new Error('Please provide a friend username');
-  }
-
-  const friend = await User.findOne({ username: friendUsername });
-  if (!friend) {
-    res.status(404);
-    throw new Error('User not found');
-  }
-
-  if (friend._id.toString() === req.user._id.toString()) {
-    res.status(400);
-    throw new Error('You cannot add yourself as a friend');
-  }
-
-  const user = await User.findById(req.user._id);
-  if (user.friends.includes(friend._id)) {
-    res.status(400);
-    throw new Error('You are already friends with this user');
-  }
-
-  user.friends.push(friend._id);
-  friend.friends.push(user._id);
-  await user.save();
-  await friend.save();
-
-  res.status(200).json({ message: 'Friend added successfully' });
 });
 
 // Token generation
@@ -489,4 +673,7 @@ module.exports = {
   getOwnPosts,
   processReferral,
   getReferralLeaderboard,
+  recognizeUser,
+  getRecognitions,
+  revokeRecognition
 };

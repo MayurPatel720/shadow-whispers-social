@@ -1,4 +1,5 @@
 
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +17,7 @@ import GhostCircles from "./pages/GhostCircles";
 import AppShell from "./components/layout/AppShell";
 import InvitePage from "./pages/InvitePage";
 import ReferralPage from "./pages/ReferralPage";
+import RecognitionsPage from "./pages/RecognitionsPage";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +80,16 @@ const App = () => (
                 <ProtectedRoute>
                   <AppShell>
                     <ReferralPage />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/recognitions"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <RecognitionsPage />
                   </AppShell>
                 </ProtectedRoute>
               }

@@ -1,3 +1,4 @@
+
 // Backend/models/userModel.js
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
@@ -53,6 +54,10 @@ const userSchema = new mongoose.Schema({
   ],
   recognizedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   identityRecognizers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  // New fields for recognition system
+  recognitionAttempts: { type: Number, default: 0 },
+  successfulRecognitions: { type: Number, default: 0 },
+  recognitionRevocations: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   bio: { type: String, default: "" },
   claimedRewards: [
     {

@@ -1,22 +1,26 @@
+
 // components/ProfileComponent.tsx
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserRound, Settings, LogOut, Image, Grid, Edit, MessageSquare, Trash2, Award } from 'lucide-react';
+import { UserRound, Settings, LogOut, Image, Grid, Edit, MessageSquare, Trash2, Award, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getUserProfile, getUserPosts, deletePost } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import EditProfileModal from './EditProfileModal';
+import RecognitionStats from '@/components/recognition/RecognitionStats';
+import RecognitionModal from '@/components/recognition/RecognitionModal';
 import { toast } from '@/hooks/use-toast';
-import { User,Post } from '@/types/user';
+import { User, Post } from '@/types/user';
 
 const ProfileComponent = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [recognitionModalOpen, setRecognitionModalOpen] = useState(false);
 
   const { data: profileData, isLoading: profileLoading } = useQuery<User>({
     queryKey: ['userProfile'],
@@ -142,6 +146,14 @@ const ProfileComponent = () => {
                   <MessageSquare size={16} className='mr-2' />
                   Whispers
                 </Button>
+                <Button
+                  variant='outline'
+                  className='text-sm'
+                  onClick={() => setRecognitionModalOpen(true)}
+                >
+                  <Eye size={16} className='mr-2' />
+                  Recognitions
+                </Button>
               </div>
             </div>
           </div>
@@ -156,6 +168,14 @@ const ProfileComponent = () => {
                 `In Undercover, you're known as ${user.anonymousAlias}. This identity stays consistent throughout your experience.`}
             </p>
           </div>
+
+          {/* Recognition Stats Section */}
+          {profileData && (
+            <RecognitionStats 
+              profile={profileData} 
+              onOpenRecognitionModal={() => setRecognitionModalOpen(true)} 
+            />
+          )}
 
           {profileData?.claimedRewards?.length > 0 && (
             <div className='mt-4'>
@@ -294,6 +314,7 @@ const ProfileComponent = () => {
       </Tabs>
 
       <EditProfileModal open={editProfileOpen} onOpenChange={setEditProfileOpen} />
+      <RecognitionModal open={recognitionModalOpen} onOpenChange={setRecognitionModalOpen} />
     </div>
   );
 };

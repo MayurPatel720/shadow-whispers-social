@@ -244,3 +244,34 @@ export const getGhostCircleById = async (circleId: string): Promise<any> => {
   const response = await api.get(`/api/ghost-circles/${circleId}`);
   return response.data;
 };
+
+// Add new recognition API calls
+export const recognizeUser = async (targetUserId: string, guessedIdentity: string): Promise<any> => {
+  try {
+    const response = await api.post('/api/users/recognize', { targetUserId, guessedIdentity });
+    return response.data;
+  } catch (error: any) {
+    console.error('Error recognizing user:', error);
+    throw error?.response?.data || error;
+  }
+};
+
+export const getRecognitions = async (type = 'all', filter = 'all'): Promise<any> => {
+  try {
+    const response = await api.get(`/api/users/recognitions?type=${type}&filter=${filter}`);
+    return response.data;
+  } catch (error: any) {
+    console.error('Error fetching recognitions:', error);
+    throw error?.response?.data || error;
+  }
+};
+
+export const revokeRecognition = async (targetUserId: string): Promise<any> => {
+  try {
+    const response = await api.post('/api/users/revoke-recognition', { targetUserId });
+    return response.data;
+  } catch (error: any) {
+    console.error('Error revoking recognition:', error);
+    throw error?.response?.data || error;
+  }
+};
