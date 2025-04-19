@@ -1,14 +1,24 @@
-
+// lib/api-referral.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { api } from '@/lib/api';
-import { generateStableCode } from '../utils/referral-code';
-import type { ReferralProgram, ReferralStats } from '../types/referral-api.types';
+import { LeaderboardEntry, ReferralProgram, ReferralStats } from '@/types/referral';
 
 export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
   try {
     const userResponse = await api.get('/api/users/profile');
     const user = userResponse.data;
 
+    const generateStableCode = (input: string) => {
+      let hash = 0;
+      for (let i = 0; i < input.length; i++) {
+        const char = input.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return Math.abs(hash).toString(36).substring(0, 6).toUpperCase().padEnd(6, '0');
+    };
     const referralCode = user._id ? generateStableCode(user._id) : 'SAMPLE';
+
     const referralsCount = user.referralCount || 0;
 
     const referralProgram: ReferralProgram = {
@@ -40,7 +50,7 @@ export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
           isUnlocked: referralsCount >= 20,
         },
       ],
-      claimedRewards: user.claimedRewards || [],
+      claimedRewards: user.claimedRewards || [], // Changed from 'rewards' to 'claimedRewards'
       leaderboardPosition: 0,
     };
 
@@ -75,6 +85,47 @@ export const getReferralStats = async (): Promise<ReferralStats> => {
     };
   } catch (error) {
     console.error('Error fetching referral stats:', error);
+    throw error;
+  }
+};
+
+export const getReferralLeaderboard = async (): Promise<LeaderboardEntry[]> => {
+  try {
+    const response = await api.get('/api/users/referral-leaderboard');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    throw error;
+  }
+};
+
+export const processReferral = async (referralCode: string): Promise<boolean> => {
+  try {
+    const userResponse = await api.get('/api/users/profile');
+    const referredUserId = userResponse.data._id;
+
+    const response = await api.post('/api/users/process-referral', { referralCode, referredUserId });
+    return response.data.success;
+  } catch (error) {
+    console.error('Error processing referral:', error);
+    return false;
+  }
+};
+
+export const claimReward = async (tierId: number) => {
+  try {
+    const response = await api.post('/api/users/claim-reward', { tierLevel: tierId });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to claim reward');
+  }
+};
+
+export const trackReferralShare = async (platform: string): Promise<void> => {
+  try {
+    console.log(`Shared referral code to ${platform}`);
+  } catch (error) {
+    console.error('Error tracking referral share:', error);
     throw error;
   }
 };
