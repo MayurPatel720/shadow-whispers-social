@@ -12,15 +12,6 @@ const ghostCircleRoutes = require('./routes/ghostCircleRoutes');
 const postRoutes = require('./routes/postRoutes');
 const whisperRoutes = require('./routes/whisperRoutes');
 
-// Debug environment variables
-console.log('Environment Variables:', {
-  PORT: process.env.PORT || 'missing',
-  MONGO_URI: process.env.MONGO_URI ? 'present' : 'missing',
-  JWT_SECRET: process.env.JWT_SECRET ? 'present' : 'missing',
-  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'missing',
-  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET ? 'present' : 'missing',
-  NODE_ENV: process.env.NODE_ENV || 'development',
-});
 
 // Middleware
 app.use(cors({

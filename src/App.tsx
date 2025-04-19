@@ -44,6 +44,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* <Route path="/profile/:userId" element={<UserProfilePage />} />
+            <Route path="/whispers/chat/:partnerId" element={<WhisperChatPage />} /> */}
             <Route
               path="/whispers"
               element={
