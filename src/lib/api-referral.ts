@@ -50,7 +50,7 @@ export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
           isUnlocked: referralsCount >= 20,
         },
       ],
-      rewards: user.claimedRewards || [],
+      claimedRewards: user.claimedRewards || [], // Changed from 'rewards' to 'claimedRewards'
       leaderboardPosition: 0,
     };
 
@@ -111,6 +111,7 @@ export const processReferral = async (referralCode: string): Promise<boolean> =>
     return false;
   }
 };
+
 export const claimReward = async (tierId: number) => {
   try {
     const response = await api.post('/api/users/claim-reward', { tierLevel: tierId });
