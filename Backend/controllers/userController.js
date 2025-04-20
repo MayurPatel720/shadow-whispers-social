@@ -25,15 +25,12 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-
-  const user = await User.create({
+  // Create user instance
+  const user = new User({
     username,
     fullName,
     email,
-    password: hashedPassword,
-    anonymousAlias: `Shadow_${generateStableCode()}`,
+    password,
     avatarEmoji: '😎',
     referralCode: generateStableCode(),
     referralCount: 0,
@@ -43,6 +40,13 @@ const registerUser = asyncHandler(async (req, res) => {
     identityRecognizers: [],
     claimedRewards: [],
   });
+
+  // Generate unique anonymous alias
+  const anonymousAlias = await user.generateAnonymousAlias();
+  user.anonymousAlias = anonymousAlias;
+
+  // Save user
+  await user.save();
 
   if (referralCode) {
     const referrer = await User.findOne({ referralCode });

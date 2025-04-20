@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
 
 interface CommentItemProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   comment: any;
   postId: string;
   onDelete: (commentId: string) => Promise<void>;

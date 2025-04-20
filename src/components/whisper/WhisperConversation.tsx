@@ -1,12 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getWhisperConversation, sendWhisper } from "@/lib/api";
+import { getWhisperConversation, initSocket } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send, Loader, User } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import AvatarGenerator from "@/components/user/AvatarGenerator";
+import { Socket } from "socket.io-client";
 
 interface WhisperConversationProps {
   partnerId: string;
@@ -16,21 +18,62 @@ interface WhisperConversationProps {
 const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, onBack }) => {
   const { user } = useAuth();
   const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<any[]>([]);
   const messagesEndRef = useRef(null);
   const queryClient = useQueryClient();
+  const [socket, setSocket] = useState<Socket | null>(null);
 
-  const { data: conversation, isLoading, error, refetch } = useQuery({
+  const { data: conversation, isLoading, error } = useQuery({
     queryKey: ["whisperConversation", partnerId],
     queryFn: () => getWhisperConversation(partnerId),
     enabled: !!partnerId && !!user,
-    refetchInterval: 10000,
   });
 
+  useEffect(() => {
+    if (conversation?.messages) {
+      setMessages(conversation.messages);
+    }
+
+    const newSocket = initSocket();
+    newSocket.on('connect', () => {
+      console.log('Connected to WebSocket');
+      newSocket.emit('joinConversation', partnerId);
+    });
+
+    newSocket.on('receiveWhisper', (whisper) => {
+      setMessages((prev) => [...prev, whisper]);
+      queryClient.invalidateQueries({ queryKey: ["whispers"] });
+      if (whisper.sender !== user._id) {
+        // Mark as read
+        whisper.updateMany(
+          { sender: partnerId, receiver: user._id, read: false },
+          { read: true }
+        );
+      }
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [conversation, partnerId, user._id, queryClient]);
+
   const sendWhisperMutation = useMutation({
-    mutationFn: (content: string) => sendWhisper(partnerId, content),
+    mutationFn: (content: string) => {
+      return new Promise((resolve, reject) => {
+        if (!socket) return reject(new Error('Socket not initialized'));
+        socket.emit('sendWhisper', { receiverId: partnerId, content }, (response: any) => {
+          if (response.status === 'success') {
+            resolve(response.whisper);
+          } else {
+            reject(new Error(response.message));
+          }
+        });
+      });
+    },
     onSuccess: () => {
       setMessage("");
-      refetch();
       queryClient.invalidateQueries({ queryKey: ["whispers"] });
     },
     onError: (error) => {
@@ -46,22 +89,22 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [conversation]);
+  }, [messages]);
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim()) {
       sendWhisperMutation.mutate(message);
     }
   };
 
-  const formatTime = (timestamp) => {
+  const formatTime = (timestamp: string) => {
     if (!timestamp) return "";
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  const formatDate = (timestamp) => {
+  const formatDate = (timestamp: string) => {
     if (!timestamp) return "";
     const date = new Date(timestamp);
     const today = new Date();
@@ -77,7 +120,7 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
     }
   };
 
-  const groupMessagesByDate = (messages) => {
+  const groupMessagesByDate = (messages: any[]) => {
     if (!messages || messages.length === 0) return [];
 
     const groups = [];
@@ -123,14 +166,16 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
     return (
       <div className="flex flex-col items-center justify-center h-full p-4">
         <p className="text-destructive mb-2">Failed to load conversation</p>
-        <Button onClick={() => refetch()}>Try Again</Button>
+        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["whisperConversation", partnerId] })}>
+          Try Again
+        </Button>
       </div>
     );
   }
 
   if (!conversation) return null;
 
-  const { partner, messages, hasRecognized } = conversation;
+  const { partner, hasRecognized } = conversation;
   const messageGroups = groupMessagesByDate(messages);
 
   return (
@@ -244,28 +289,28 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
       </div>
 
       <div className="p-3 bg-undercover-dark sticky bottom-16 z-20 flex items-center justify-between md:bottom-0">
-  <form onSubmit={handleSendMessage} className="flex-1">
-    <Input
-      value={message}
-      onChange={(e) => setMessage(e.target.value)}
-      placeholder="Type a message..."
-      className="w-full bg-gray-800 border-none text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-undercover-purple p-2 rounded-lg"
-    />
-  </form>
-  <Button
-    type="submit"
-    size="icon"
-    disabled={!message.trim() || sendWhisperMutation.isPending}
-    onClick={handleSendMessage}
-    className="bg-undercover-purple hover:bg-undercover-deep-purple rounded-full w-12 h-12 ml-2 flex items-center justify-center"
-  >
-    {sendWhisperMutation.isPending ? (
-      <Loader className="h-5 w-5 animate-spin text-white" />
-    ) : (
-      <Send size={16} className="text-white" />
-    )}
-  </Button>
-</div>
+        <form onSubmit={handleSendMessage} className="flex-1">
+          <Input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Type a message..."
+            className="w-full bg-gray-800 border-none text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-undercover-purple p-2 rounded-lg"
+          />
+        </form>
+        <Button
+          type="submit"
+          size="icon"
+          disabled={!message.trim() || sendWhisperMutation.isPending}
+          onClick={handleSendMessage}
+          className="bg-undercover-purple hover:bg-undercover-deep-purple rounded-full w-12 h-12 ml-2 flex items-center justify-center"
+        >
+          {sendWhisperMutation.isPending ? (
+            <Loader className="h-5 w-5 animate-spin text-white" />
+          ) : (
+            <Send size={16} className="text-white" />
+          )}
+        </Button>
+      </div>
     </div>
   );
 };

@@ -21,6 +21,7 @@ const CircleFeedView: React.FC<CircleFeedViewProps> = ({ circleId, onBack }) => 
     queryKey: ["circleDetails", circleId],
     queryFn: () => getGhostCircleById(circleId),
   });
+  console.log(circleDetails);
   
   const { 
     data: posts = [], 
@@ -63,8 +64,8 @@ const CircleFeedView: React.FC<CircleFeedViewProps> = ({ circleId, onBack }) => 
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 z-10 bg-background p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-4">
+      <div className="sticky p-4 mx-4 top-0 z-10 bg-background border-b border-border">
+        <div className="flex items-center justify-between mb-8">
           {onBack && (
             <Button variant="ghost" size="icon" onClick={onBack} className="md:hidden">
               <ArrowLeft />

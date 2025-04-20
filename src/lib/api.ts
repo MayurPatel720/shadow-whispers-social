@@ -1,12 +1,10 @@
-// lib/api-client.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios';
-import { User ,Post } from '@/types/user';
-
+import { io, Socket } from 'socket.io-client';
+import { User, Post } from '@/types/user';
 // Create axios instance with base URL
 const API_URL = 'http://localhost:8900';
 // const API_URL = 'https://undercover-service.onrender.com';
-
 export const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -15,7 +13,6 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// Add a request interceptor to include JWT token in requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -27,18 +24,30 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Add a response interceptor to handle token expiration or other errors
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
       console.log('Unauthorized, handling token refresh or re-login...');
-      // Implement token refresh logic here if you have refresh tokens
-      // Alternatively, trigger a logout action
     }
     return Promise.reject(error);
   }
 );
+
+export const getToken = () => {
+  return localStorage.getItem('token') || '';
+};
+
+export const initSocket = (): Socket => {
+  const token = getToken();
+  const socket = io('http://localhost:8900', {
+    auth: { token },
+  });
+  socket.on('connect_error', (err) => {
+    console.error('Socket.IO connection error:', err.message);
+  });
+  return socket;
+};
 
 // Auth API calls
 export const loginUser = async (email: string, password: string): Promise<User & { token: string }> => {

@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 
 const ghostCircleSchema = mongoose.Schema(
@@ -49,7 +48,17 @@ const ghostCircleSchema = mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+ghostCircleSchema.virtual('members.userDetails', {
+  ref: 'User',
+  localField: 'members.userId',
+  foreignField: '_id',
+  justOne: false,
+  options: { select: 'anonymousAlias' },
+});
 
 module.exports = mongoose.model('GhostCircle', ghostCircleSchema);
