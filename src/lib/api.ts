@@ -3,8 +3,8 @@ import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import { User, Post } from '@/types/user';
 // Create axios instance with base URL
-const API_URL = 'http://localhost:8900';
-// const API_URL = 'https://undercover-service.onrender.com';
+// const API_URL = 'http://localhost:8900';
+const API_URL = 'https://undercover-service.onrender.com';
 export const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -40,7 +40,7 @@ export const getToken = () => {
 
 export const initSocket = (): Socket => {
   const token = getToken();
-  const socket = io('http://localhost:8900', {
+  const socket = io(`${API_URL}`, {
     auth: { token },
   });
   socket.on('connect_error', (err) => {
@@ -252,7 +252,7 @@ export const joinGhostCircle = async (circleId: string): Promise<any> => {
 export const getGhostCircleById = async (circleId: string): Promise<any> => {
   const response = await api.get(`/api/ghost-circles/${circleId}`);
   return response.data;
-};
+};a
 
 // Add new recognition API calls
 export const recognizeUser = async (targetUserId: string, guessedIdentity: string): Promise<any> => {
