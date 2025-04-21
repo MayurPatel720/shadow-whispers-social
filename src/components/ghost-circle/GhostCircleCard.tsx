@@ -19,7 +19,7 @@ interface GhostCircleCardProps {
 
 const GhostCircleCard: React.FC<GhostCircleCardProps> = ({ circle, onSelect }) => {
   const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
-
+  
   return (
 <Card className="rounded-xl overflow-hidden glassmorphism text-card-foreground transition-all duration-300 hover:shadow-lg">
 <CardHeader className="bg-muted/50 pb-2 border-b border-border">

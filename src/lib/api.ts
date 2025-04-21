@@ -3,8 +3,8 @@ import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import { User, Post } from '@/types/user';
 // Create axios instance with base URL
-// const API_URL = 'http://localhost:8900';
-const API_URL = 'https://undercover-service.onrender.com';
+const API_URL = 'http://localhost:8900';
+// const API_URL = 'https://undercover-service.onrender.com';
 export const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -79,11 +79,11 @@ export const registerUser = async (
   }
 };
 
-export const getUserProfile = async (): Promise<User> => {
-  const response = await api.get('/api/users/profile');
+export const getUserProfile = async (userId?: string): Promise<User> => {
+  const endpoint = userId ? `/api/users/profile/${userId}` : '/api/users/profile';
+  const response = await api.get(endpoint);
   return response.data;
 };
-
 export const updateUserProfile = async (userData: Partial<User>): Promise<User> => {
   const response = await api.put('/api/users/profile', userData);
   return response.data;

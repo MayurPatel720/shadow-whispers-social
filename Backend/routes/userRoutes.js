@@ -1,11 +1,10 @@
-
-// routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
 const {
   registerUser,
   loginUser,
-  getUserProfile,
+  getMyProfile,
+  getUserProfileById,
   updateUserProfile,
   addFriend,
   getOwnPosts,
@@ -15,9 +14,11 @@ const {
   getReferralLeaderboard,
   recognizeUser,
   getRecognitions,
-  revokeRecognition
+  revokeRecognition,
+ 
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
+const { sendWhisper, getMyWhispers, getWhisperConversation } = require('../controllers/whisperController');
 
 router.post('/register', registerUser);
 router.post('/login', loginUser);
@@ -26,7 +27,8 @@ router.get('/referral-leaderboard', getReferralLeaderboard);
 
 router.post('/claim-reward', protect, claimReward);
 router.get('/userposts/:userId', protect, getOwnPosts);
-router.get('/profile', protect, getUserProfile);
+router.get('/profile', protect, getMyProfile);
+router.get('/profile/:userId', protect, getUserProfileById);
 router.post('/verify-payment', protect, verifyPayment);
 router.put('/profile', protect, updateUserProfile);
 router.post('/friends', protect, addFriend);
@@ -35,5 +37,10 @@ router.post('/friends', protect, addFriend);
 router.post('/recognize', protect, recognizeUser);
 router.get('/recognitions', protect, getRecognitions);
 router.post('/revoke-recognition', protect, revokeRecognition);
+
+// New whisper routes
+router.post('/api/whispers', protect, sendWhisper); // Send a new whisper
+router.get('/api/whispers', protect, getMyWhispers); // Get all whispers
+router.get('/api/whispers/:userId', protect, getWhisperConversation); // Get conversation with specific user
 
 module.exports = router;

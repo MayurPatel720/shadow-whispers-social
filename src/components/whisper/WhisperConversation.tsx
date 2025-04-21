@@ -9,6 +9,7 @@ import { ArrowLeft, Send, Loader, User } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import AvatarGenerator from "@/components/user/AvatarGenerator";
 import { Socket } from "socket.io-client";
+import { useNavigate } from "react-router-dom";
 
 interface WhisperConversationProps {
   partnerId: string;
@@ -17,6 +18,7 @@ interface WhisperConversationProps {
 
 const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, onBack }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const messagesEndRef = useRef(null);
@@ -119,7 +121,9 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
       return date.toLocaleDateString();
     }
   };
-
+  const handleAliasClick = (userId: string, alias: string) => {
+    navigate(`/profile/${userId}`, { state: { anonymousAlias: alias } });
+  };
   const groupMessagesByDate = (messages: any[]) => {
     if (!messages || messages.length === 0) return [];
 
@@ -211,7 +215,7 @@ const WhisperConversation: React.FC<WhisperConversationProps> = ({ partnerId, on
         >
           <ArrowLeft />
         </Button>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3" onClick={() => handleAliasClick(partner._id, partner.anonymousAlias)}>
           <AvatarGenerator
             emoji={partner.avatarEmoji || "🎭"}
             nickname={partner.anonymousAlias}

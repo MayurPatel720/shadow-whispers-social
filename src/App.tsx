@@ -1,5 +1,3 @@
-
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,6 +16,7 @@ import AppShell from "./components/layout/AppShell";
 import InvitePage from "./pages/InvitePage";
 import ReferralPage from "./pages/ReferralPage";
 import RecognitionsPage from "./pages/RecognitionsPage";
+import WhisperChatPage from "./components/whisper/WhisperChatPage";
 
 const queryClient = new QueryClient();
 
@@ -32,7 +31,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/invite" element={<InvitePage />} />
-            
+
             {/* Main Routes with AppShell */}
             <Route
               path="/"
@@ -66,6 +65,22 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/profile/:userId"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <ProfilePage />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/chat/:partnerId" element={
+            
+              <AppShell>
+              <WhisperChatPage />
+              </AppShell>
+          } />
             <Route
               path="/ghost-circles"
               element={
@@ -110,7 +125,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

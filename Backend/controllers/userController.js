@@ -121,27 +121,59 @@ const loginUser = asyncHandler(async (req, res) => {
 // @desc    Get user profile
 // @route   GET /api/users/profile
 // @access  Private
-const getUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select('-password');
+const getMyProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select(
+    'anonymousAlias username avatarEmoji bio identityRecognizers recognizedUsers claimedRewards'
+  );
+
   if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
-  res.json({
-    _id: user._id,
-    username: user.username,
-    fullName: user.fullName,
-    email: user.email,
-    anonymousAlias: user.anonymousAlias,
-    avatarEmoji: user.avatarEmoji,
-    bio: user.bio,
-    referralCount: user.referralCount,
-    friends: user.friends,
-    recognizedUsers: user.recognizedUsers,
-    identityRecognizers: user.identityRecognizers,
-    claimedRewards: user.claimedRewards,
-  });
+
+  res.json(user);
 });
+
+// @desc    Get user profile by ID
+// @route   GET /api/users/profile/:userId
+// @access  Private
+const getUserProfileById = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  // Ensure userId is valid and different from the authenticated user
+  if (!userId) {
+    res.status(400);
+    throw new Error('User ID is required');
+  }
+
+  const user = await User.findById(userId).select(
+    'anonymousAlias username avatarEmoji bio identityRecognizers recognizedUsers claimedRewards'
+  );
+
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // Authorization check: Only allow access if the requester is the user themselves or a member of the same circle
+  if (req.user._id.toString() !== userId) {
+    const isMember = await isCircleMember(req.user._id, user);
+    if (!isMember) {
+      res.status(403);
+      throw new Error('Not authorized to view this profile');
+    }
+  }
+
+  res.json(user);
+});
+
+const isCircleMember = async (userId, targetUser) => {
+  const userCircles = await User.findById(userId).select('ghostCircles');
+  const targetCircles = await User.findById(targetUser._id).select('ghostCircles');
+  return userCircles.ghostCircles.some((circle) =>
+    targetCircles.ghostCircles.includes(circle)
+  );
+};
 
 // @desc    Update user profile
 // @route   PUT /api/users/profile
@@ -671,7 +703,7 @@ module.exports = {
   registerUser,
   loginUser,
   verifyPayment,
-  getUserProfile,
+  getUserProfileById,
   updateUserProfile,
   addFriend,
   getOwnPosts,
@@ -679,5 +711,5 @@ module.exports = {
   getReferralLeaderboard,
   recognizeUser,
   getRecognitions,
-  revokeRecognition
+  revokeRecognition,getMyProfile
 };

@@ -10,9 +10,13 @@ const WhisperChatPage: React.FC = () => {
     return <div className="p-4 text-center">No partner selected</div>;
   }
 
+  const handleBack = () => {
+    window.history.back();
+  };
+
   return (
     <div className="min-h-screen bg-background p-4">
-      <WhisperConversation partnerId={partnerId} />
+      <WhisperConversation partnerId={partnerId} onBack={handleBack} />
     </div>
   );
 };

@@ -49,6 +49,7 @@ import DeletePostDialog from './DeletePostDialog';
 import CommentItem from './CommentItem';
 import GuessIdentityModal from '@/components/recognition/GuessIdentityModal';
 import { User } from '@/types/user';
+import { useNavigate } from 'react-router-dom';
 
 interface Post {
   _id: string;
@@ -78,6 +79,8 @@ const PostCard: React.FC<PostCardProps> = ({
   showOptions = false,
 }) => {
   const { user } = useAuth();
+   const navigate = useNavigate();
+   
   const [likeCount, setLikeCount] = useState(post.likes?.length || 0);
   const [guessModalOpen, setGuessModalOpen] = useState(false);
   const [isLiked, setIsLiked] = useState(
@@ -94,7 +97,9 @@ const PostCard: React.FC<PostCardProps> = ({
 
   // Check if the post belongs to the current user
   const isOwnPost = post.user === currentUserId;
-
+  const handleAliasClick = (userId: string, alias: string) => {
+    navigate(`/profile/${userId}`, { state: { anonymousAlias: alias } });
+  };
   const handleLike = async () => {
     if (isLiking) return;
 
@@ -177,6 +182,7 @@ const PostCard: React.FC<PostCardProps> = ({
       setIsSubmitting(false);
     }
   };
+  
 
   const handleEditComment = async (commentId: string, content: string) => {
     try {
@@ -265,7 +271,7 @@ const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <Card className="border border-undercover-purple/20 bg-card shadow-md hover:shadow-lg transition-shadow mb-4">
-      <CardHeader className="p-4 pb-2">
+      <CardHeader className="p-4 pb-2" onClick={()=> handleAliasClick(post.user, post.anonymousAlias)}>
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <AvatarGenerator

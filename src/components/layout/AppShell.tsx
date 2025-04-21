@@ -49,6 +49,7 @@ const AppShell = ({ children }: AppShellProps) => {
   const { user, logout } = useAuth();
 
   useEffect(() => {
+    
     if (location.pathname === "/") setCurrentTab("Home");
     else if (location.pathname === "/whispers") setCurrentTab("Whispers");
     else if (location.pathname === "/ghost-circles") setCurrentTab("Circles");
