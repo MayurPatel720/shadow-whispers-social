@@ -252,7 +252,7 @@ export const joinGhostCircle = async (circleId: string): Promise<any> => {
 export const getGhostCircleById = async (circleId: string): Promise<any> => {
   const response = await api.get(`/api/ghost-circles/${circleId}`);
   return response.data;
-};a
+};
 
 // Add new recognition API calls
 export const recognizeUser = async (targetUserId: string, guessedIdentity: string): Promise<any> => {
