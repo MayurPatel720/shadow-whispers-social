@@ -17,6 +17,7 @@ import InvitePage from "./pages/InvitePage";
 import ReferralPage from "./pages/ReferralPage";
 import RecognitionsPage from "./pages/RecognitionsPage";
 import WhisperChatPage from "./components/whisper/WhisperChatPage";
+import PostDetail from "./components/feed/PostDetail";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/post/:id" element={<PostDetail />} />
             <Route path="/chat/:partnerId" element={
             
               <AppShell>

@@ -1,6 +1,5 @@
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Heart,
   MessageCircle,
@@ -10,6 +9,7 @@ import {
   Edit,
   Send,
   Eye,
+  Share2,
 } from 'lucide-react';
 import {
   Card,
@@ -41,6 +41,7 @@ import {
   editComment,
   deleteComment,
   replyToComment,
+  incrementShareCount,
 } from '@/lib/api';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
@@ -53,7 +54,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface Post {
   _id: string;
-  user: string; // User ID
+  user: string;
   username?: string;
   anonymousAlias: string;
   avatarEmoji: string;
@@ -63,6 +64,7 @@ interface Post {
   comments: any[];
   createdAt: string;
   updatedAt: string;
+  shareCount?: number;
 }
 
 interface PostCardProps {
@@ -79,9 +81,10 @@ const PostCard: React.FC<PostCardProps> = ({
   showOptions = false,
 }) => {
   const { user } = useAuth();
-   const navigate = useNavigate();
-   
+  const navigate = useNavigate();
+
   const [likeCount, setLikeCount] = useState(post.likes?.length || 0);
+  const [shareCount, setShareCount] = useState(post.shareCount || 0);
   const [guessModalOpen, setGuessModalOpen] = useState(false);
   const [isLiked, setIsLiked] = useState(
     post.likes?.some((like) => like.user === currentUserId)
@@ -94,12 +97,13 @@ const PostCard: React.FC<PostCardProps> = ({
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
-  // Check if the post belongs to the current user
   const isOwnPost = post.user === currentUserId;
   const handleAliasClick = (userId: string, alias: string) => {
     navigate(`/profile/${userId}`, { state: { anonymousAlias: alias } });
   };
+
   const handleLike = async () => {
     if (isLiking) return;
 
@@ -122,6 +126,66 @@ const PostCard: React.FC<PostCardProps> = ({
       console.error('Like error:', error);
     } finally {
       setIsLiking(false);
+    }
+  };
+
+  const handleShare = async (platform?: 'whatsapp' | 'instagram' | 'link') => {
+    try {
+      setIsSharing(true);
+
+      const postUrl = `${window.location.origin}/post/${post._id}`;
+      const shareText = `${post.anonymousAlias}'s post: ${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}`;
+
+      switch (platform) {
+        case 'whatsapp': {
+          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${postUrl}`)}`;
+          window.open(whatsappUrl, '_blank');
+          break;
+        }
+
+        case 'instagram': {
+          const instagramUrl = `https://www.instagram.com/?url=${encodeURIComponent(postUrl)}`;
+          window.open(instagramUrl, '_blank');
+          break;
+        }
+
+        case 'link':
+        default:
+          if (navigator.share) {
+            await navigator.share({
+              title: `${post.anonymousAlias}'s post`,
+              text: shareText,
+              url: postUrl,
+            });
+            toast({
+              title: 'Post shared',
+              description: 'The post has been shared successfully!',
+            });
+          } else {
+            await navigator.clipboard.writeText(postUrl);
+            toast({
+              title: 'Link copied',
+              description: 'Post link has been copied to clipboard!',
+            });
+          }
+          break;
+      }
+
+      const response = await incrementShareCount(post._id);
+      setShareCount(response.shareCount);
+
+    } catch (error) {
+      console.error('Error sharing post:', error);
+
+      if (error instanceof Error && error.name !== 'AbortError') {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Could not share this post. Please try again.',
+        });
+      }
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -165,7 +229,7 @@ const PostCard: React.FC<PostCardProps> = ({
       );
 
       setNewComment('');
-      loadComments(); // Reload comments after adding a new one
+      loadComments();
 
       toast({
         title: 'Comment added',
@@ -182,7 +246,6 @@ const PostCard: React.FC<PostCardProps> = ({
       setIsSubmitting(false);
     }
   };
-  
 
   const handleEditComment = async (commentId: string, content: string) => {
     try {
@@ -191,7 +254,7 @@ const PostCard: React.FC<PostCardProps> = ({
         title: 'Comment updated',
         description: 'Your comment has been updated successfully!',
       });
-      loadComments(); // Reload comments after editing
+      loadComments();
     } catch (error) {
       console.error('Error editing comment:', error);
       toast({
@@ -209,7 +272,7 @@ const PostCard: React.FC<PostCardProps> = ({
         title: 'Comment deleted',
         description: 'Your comment has been deleted successfully!',
       });
-      loadComments(); // Reload comments after deleting
+      loadComments();
     } catch (error) {
       console.error('Error deleting comment:', error);
       toast({
@@ -227,7 +290,7 @@ const PostCard: React.FC<PostCardProps> = ({
         title: 'Reply added',
         description: 'Your reply has been posted successfully!',
       });
-      loadComments(); // Reload comments after adding reply
+      loadComments();
     } catch (error) {
       console.error('Error posting reply:', error);
       toast({
@@ -238,16 +301,14 @@ const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  // Format the post time
   const postTime = post.createdAt
     ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })
     : 'Unknown time';
 
-  // Create a simple identity object from post data
   const identity = {
     emoji: post.avatarEmoji || '🎭',
     nickname: post.anonymousAlias || 'Anonymous',
-    color: '#9333EA', // Default purple color
+    color: '#9333EA',
   };
 
   const targetUser: User = {
@@ -271,7 +332,7 @@ const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <Card className="border border-undercover-purple/20 bg-card shadow-md hover:shadow-lg transition-shadow mb-4">
-      <CardHeader className="p-4 pb-2" onClick={()=> handleAliasClick(post.user, post.anonymousAlias)}>
+      <CardHeader className="p-4 pb-2" onClick={() => handleAliasClick(post.user, post.anonymousAlias)}>
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <AvatarGenerator
@@ -330,8 +391,8 @@ const PostCard: React.FC<PostCardProps> = ({
         )}
       </CardContent>
       <CardFooter className="p-4 pt-0 flex flex-col">
-        <div className="flex justify-between w-full">
-          <div className="flex space-x-4">
+        <div className="flex items-center justify-between w-full gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Button
               variant="ghost"
               size="sm"
@@ -354,6 +415,30 @@ const PostCard: React.FC<PostCardProps> = ({
               <MessageCircle size={16} />
               <span>{comments.length || post.comments?.length || 0}</span>
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center space-x-1 text-xs"
+                  disabled={isSharing}
+                >
+                  <Share2 size={16} />
+                  <span>{shareCount}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+                  Share via WhatsApp
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShare('instagram')}>
+                  Share via Instagram
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShare('link')}>
+                  Copy Link
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           {!isOwnPost && (
             <Button
@@ -361,9 +446,9 @@ const PostCard: React.FC<PostCardProps> = ({
               variant="outline"
               onClick={() => setGuessModalOpen(true)}
               title="Guess identity"
-              className="border-undercover-purple/20 hover:bg-undercover-purple/10"
+              className="flex items-center space-x-1 text-xs border-undercover-purple/20 hover:bg-undercover-purple/10"
             >
-              <Eye size={16} /> Guess Identity?
+              <Eye size={14} /> <span>Guess?</span>
             </Button>
           )}
         </div>

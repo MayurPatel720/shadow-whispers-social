@@ -14,6 +14,8 @@ const {
   editComment,
   deleteComment,
   replyToComment,
+  getPostById,
+  incrementShareCount,
 } = require('../controllers/postController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -24,6 +26,8 @@ router.delete('/delete/:postId', protect, deletepost);
 router.get('/global', protect, getGlobalFeed);
 router.get('/circle/:id', protect, getGhostCirclePosts);
 router.put('/:id/like', protect, likePost);
+router.get('/:id', getPostById);
+router.put('/:postId/share', protect, incrementShareCount); 
 router.post('/:id/recognize', protect, recognizeUser);
 
 // Comment routes

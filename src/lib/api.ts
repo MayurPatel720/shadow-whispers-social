@@ -55,6 +55,14 @@ export const loginUser = async (email: string, password: string): Promise<User &
   return response.data;
 };
 
+export const getPostById = async (postId: string): Promise<Post> => {
+  const response = await api.get(`/api/posts/${postId}`);
+  return response.data;
+};
+export const incrementShareCount = async (postId: string): Promise<{ shareCount: number }> => {
+  const response = await api.put(`/api/posts/${postId}/share`);
+  return response.data;
+};
 export const registerUser = async (
   username: string,
   fullName: string,

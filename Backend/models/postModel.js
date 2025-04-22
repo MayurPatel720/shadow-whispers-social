@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 
 // Define a comment schema to be reused in both comments and replies
@@ -83,6 +82,10 @@ const postSchema = mongoose.Schema(
     expiresAt: {
       type: Date,
       required: true,
+    },
+    shareCount: {
+      type: Number,
+      default: 0, // Initialize to 0 for new posts
     },
   },
   {

@@ -4,6 +4,7 @@ const Post = require('../models/postModel');
 const User = require('../models/userModel');
 const GhostCircle = require('../models/ghostCircleModel');
 const mongoose = require('mongoose');
+const { log } = require('console');
 
 // @desc    Create a new post (global or in ghost circle)
 // @route   POST /api/posts
@@ -511,16 +512,45 @@ const recognizeUser = asyncHandler(async (req, res) => {
   }
 });
 
+const incrementShareCount = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  const post = await Post.findById(postId);
+  if (!post) {
+    res.status(404);
+    throw new Error('Post not found');
+  }
+
+  post.shareCount += 1; // Increment share count
+  await post.save();
+
+  res.status(200).json({ shareCount: post.shareCount });
+});
+
+const getPostById = asyncHandler(async (req, res) => {
+  const post = await Post.findById(req.params.id)
+    .populate('user', 'anonymousAlias avatarEmoji username')
+    .populate('comments.user', 'anonymousAlias avatarEmoji');
+
+  if (!post) {
+    res.status(404);
+    throw new Error('Post not found');
+  }
+
+  res.json(post);
+});
+
 module.exports = {
   createPost,
   updatePost,
   getGlobalFeed,
   getGhostCirclePosts,
+  getPostById,
   likePost,
   recognizeUser,
   getComments,
   addComment,
-  editComment,
+  editComment,incrementShareCount,
   deleteComment,
   replyToComment,
   deletepost
