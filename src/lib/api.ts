@@ -153,7 +153,7 @@ export const updatePost = async (postId: string, content: string, imageUrl?: str
 };
 
 export const deletePost = async (postId: string): Promise<void> => {
-  await api.delete(`/api/posts/${postId}`);
+  await api.delete(`/api/posts/delete/${postId}`);
 };
 
 export const getUserPosts = async (userId: string): Promise<Post[]> => {

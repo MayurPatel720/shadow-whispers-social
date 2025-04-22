@@ -25,13 +25,12 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
-  // Create user instance
+  // Create user instance without explicitly setting avatarEmoji
   const user = new User({
     username,
     fullName,
     email,
     password,
-    avatarEmoji: '😎',
     referralCode: generateStableCode(),
     referralCount: 0,
     referredBy: null,
@@ -45,11 +44,10 @@ const registerUser = asyncHandler(async (req, res) => {
   const anonymousAlias = await user.generateAnonymousAlias();
   user.anonymousAlias = anonymousAlias;
 
-  // Save user
-  await user.save();
-
+  // Handle referral logic before saving
+  let referrer = null; // Declare referrer outside the block with a default value
   if (referralCode) {
-    const referrer = await User.findOne({ referralCode });
+    referrer = await User.findOne({ referralCode });
     if (!referrer) {
       console.warn(`Invalid referral code: ${referralCode}`);
     } else if (referrer._id.toString() === user._id.toString()) {
@@ -59,10 +57,12 @@ const registerUser = asyncHandler(async (req, res) => {
     } else {
       user.referredBy = referrer._id;
       referrer.referralCount = (referrer.referralCount || 0) + 1;
-      await user.save();
-      await referrer.save();
+      await referrer.save(); // Save referrer inside the block
     }
   }
+
+  // Save user (this triggers the pre-save hook for avatarEmoji)
+  await user.save();
 
   const token = generateToken(user._id);
   res.status(201).json({
@@ -71,7 +71,7 @@ const registerUser = asyncHandler(async (req, res) => {
     fullName: user.fullName,
     email: user.email,
     anonymousAlias: user.anonymousAlias,
-    avatarEmoji: user.avatarEmoji,
+    avatarEmoji: user.avatarEmoji, // Will reflect the randomly assigned emoji
     referralCode: user.referralCode,
     referralCount: user.referralCount,
     token,
@@ -123,8 +123,7 @@ const loginUser = asyncHandler(async (req, res) => {
 // @access  Private
 const getMyProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select(
-    'anonymousAlias username avatarEmoji bio identityRecognizers recognizedUsers claimedRewards'
-  );
+'anonymousAlias username avatarEmoji bio identityRecognizers recognizedUsers claimedRewards referralCode referralCount'  );
 
   if (!user) {
     res.status(404);

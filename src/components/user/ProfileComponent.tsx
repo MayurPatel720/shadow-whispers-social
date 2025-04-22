@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,25 +15,26 @@ import {
   Award,
   Eye,
   Send,
+  Plus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getUserProfile, getUserPosts, deletePost } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import EditProfileModal from "./EditProfileModal";
-import RecognitionStats from "@/components/recognition/RecognitionStats";
 import RecognitionModal from "@/components/recognition/RecognitionModal";
 import { toast } from "@/hooks/use-toast";
 import { User, Post } from "@/types/user";
 
 interface ProfileComponentProps {
-  userId?: string; // Optional prop for target user ID
-  anonymousAlias?: string; // Optional prop for target user's alias
+  userId?: string;
+  anonymousAlias?: string;
 }
 
-const ProfileComponent = ({ userId: targetUserId, anonymousAlias: targetAlias }: ProfileComponentProps) => {
-  console.log("Target User ID:", targetUserId); // Debug log
-  console.log("Target Alias:", targetAlias); // Debug log
+const ProfileComponent = ({
+  userId: targetUserId,
+  anonymousAlias: targetAlias,
+}: ProfileComponentProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -41,15 +42,13 @@ const ProfileComponent = ({ userId: targetUserId, anonymousAlias: targetAlias }:
 
   const isOwnProfile = !targetUserId || targetUserId === user?._id;
   const currentUserId = isOwnProfile ? user?._id : targetUserId;
-  console.log("Current User ID:", currentUserId); // Debug log
-  console.log("Is Own Profile:", isOwnProfile); // Debug log
 
   const {
     data: profileData,
     isLoading: profileLoading,
     refetch: refetchProfile,
   } = useQuery<User>({
-    queryKey: ['userProfile', targetUserId || user?._id],
+    queryKey: ["userProfile", targetUserId || user?._id],
     queryFn: () => getUserProfile(currentUserId!),
     enabled: !!currentUserId,
     meta: {
@@ -57,20 +56,18 @@ const ProfileComponent = ({ userId: targetUserId, anonymousAlias: targetAlias }:
         toast({
           variant: "destructive",
           title: "Failed to load profile",
-          description: "Could not retrieve your profile information.",
+          description: "Could not retrieve profile information.",
         });
       },
     },
   });
-
-  console.log("Profile Data:", profileData); // Debug log
 
   const {
     data: userPosts,
     isLoading: postsLoading,
     refetch,
   } = useQuery<Post[]>({
-    queryKey: ['userPosts', currentUserId],
+    queryKey: ["userPosts", currentUserId],
     queryFn: () => getUserPosts(currentUserId!),
     enabled: !!currentUserId,
     meta: {
@@ -78,14 +75,16 @@ const ProfileComponent = ({ userId: targetUserId, anonymousAlias: targetAlias }:
         toast({
           variant: "destructive",
           title: "Failed to load posts",
-          description: "Could not retrieve your posts.",
+          description: "Could not retrieve posts.",
         });
       },
     },
   });
 
   const handleDeletePost = async (postId: string) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this post?");
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this post?"
+    );
     if (!confirmDelete) return;
 
     try {
@@ -126,131 +125,211 @@ const ProfileComponent = ({ userId: targetUserId, anonymousAlias: targetAlias }:
 
   const userStats = {
     posts: userPosts?.length || 0,
-    followers: profileData?.identityRecognizers?.length || 0,
-    following: profileData?.recognizedUsers?.length || 0,
+    recognizedBy: profileData?.identityRecognizers?.length || 0,
+    recognized: profileData?.recognizedUsers?.length || 0,
+    recognitionRate:
+      profileData?.identityRecognizers?.length &&
+      profileData.recognizedUsers?.length
+        ? Math.round(
+            (profileData.recognizedUsers.length /
+              profileData.identityRecognizers.length) *
+              100
+          ) || 0
+        : 0,
   };
 
-  const claimedBadges = profileData?.claimedRewards?.filter(
-    (reward) => reward.rewardType === "badge" && reward.status === "completed"
-  ) || [];
+  const claimedBadges =
+    profileData?.claimedRewards?.filter(
+      (reward) => reward.rewardType === "badge" && reward.status === "completed"
+    ) || [];
 
   return (
-    <div className="mx-auto max-w-4xl p-2 sm:p-4">
-      <Card className="bg-card border border-undercover-purple/30 mb-4 sm:mb-6">
-        <CardHeader className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-            <div className="flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-undercover-dark text-3xl sm:text-5xl">
-              {profileData?.avatarEmoji || user.avatarEmoji}
-            </div>
-            <div className="flex-1">
-              <CardTitle className="text-xl sm:text-2xl font-bold text-undercover-light-purple">
-                {displayedAlias}
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                @{profileData?.username || user.username}
-              </p>
-
-              {claimedBadges.length > 0 && (
-                <div className="flex gap-2 mt-2">
-                  {claimedBadges.map((reward) => (
-                    <span
-                      key={reward.tierLevel}
-                      className="text-xl sm:text-2xl"
-                      title="Shadow Recruiter Badge"
-                    >
-                      {reward.tierLevel === 1 ? "🥷" : ""}
-                    </span>
-                  ))}
+    <div className="max-w-4xl w-full mx-auto px-2 py-2 sm:px-4 sm:py-4">
+      <Card className="bg-card shadow-md border border-undercover-purple/20 mb-4">
+        {/* Header Section */}
+        <CardHeader className="p-3 sm:p-4 md:p-6 pb-0">
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+            {/* Avatar and Name Section with Edit Button on mobile */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-14 w-14 sm:h-16 sm:w-16 flex items-center justify-center rounded-full bg-undercover-dark text-2xl sm:text-3xl">
+                  {profileData?.avatarEmoji || user.avatarEmoji || "🎭"}
                 </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row mt-2 sm:mt-4 space-x-0 sm:space-x-6">
-                <div className="text-center mb-2 sm:mb-0">
-                  <p className="font-bold text-base sm:text-lg">{userStats.posts}</p>
-                  <p className="text-xs sm:text-xs text-muted-foreground">Posts</p>
-                </div>
-                <div className="text-center mb-2 sm:mb-0">
-                  <p className="font-bold text-base sm:text-lg">{userStats.followers}</p>
-                  <p className="text-xs sm:text-xs text-muted-foreground">Recognized by</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-base sm:text-lg">{userStats.following}</p>
-                  <p className="text-xs sm:text-xs text-muted-foreground">Recognized</p>
+                <div>
+                  <CardTitle className="text-lg sm:text-xl text-undercover-light-purple">
+                    {displayedAlias}
+                  </CardTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    @{profileData?.username || user.username}
+                  </p>
+                  {claimedBadges.length > 0 && (
+                    <div className="flex gap-1 mt-1">
+                      {claimedBadges.map((reward) => (
+                        <span
+                          key={reward.tierLevel}
+                          className="text-lg"
+                          title="Shadow Recruiter Badge"
+                        >
+                          {reward.tierLevel === 1 ? "🥷" : ""}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-4">
-                {isOwnProfile ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      className="text-sm w-full sm:w-auto"
-                      onClick={() => setEditProfileOpen(true)}
-                    >
-                      <Edit size={14} className="mr-2" />
-                      Edit Profile
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="text-sm w-full sm:w-auto"
-                      onClick={() => navigate("/whispers")}
-                    >
-                      <MessageSquare size={14} className="mr-2" />
-                      Whispers
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="text-sm w-full sm:w-auto"
-                      onClick={() => setRecognitionModalOpen(true)}
-                    >
-                      <Eye size={14} className="mr-2" />
-                      Recognitions
-                    </Button>
-                  </>
-                ) : (
+              
+              {/* Only Edit Button on the same line as name (mobile only) */}
+              {isOwnProfile && (
+                <div className="sm:hidden">
                   <Button
                     variant="outline"
-                    className="text-sm w-full sm:w-auto"
-                    onClick={handleWhisperClick}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setEditProfileOpen(true)}
                   >
-                    <Send size={14} className="mr-2" />
-                    Whisper
+                    <Edit size={16} />
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
+
+            {/* Action Buttons - Desktop view */}
+            <div className="hidden sm:flex gap-2">
+              {isOwnProfile ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditProfileOpen(true)}
+                  >
+                    <Edit size={16} className="mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/whispers")}
+                  >
+                    <MessageSquare size={16} className="mr-2" />
+                    Messages
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRecognitionModalOpen(true)}
+                  >
+                    <Eye size={16} className="mr-2" />
+                    Recognitions
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleWhisperClick}
+                >
+                  <Send size={16} className="mr-2" />
+                  Whisper
+                </Button>
+              )}
+            </div>
+            
+            {/* Mobile view - second row of buttons */}
+            {isOwnProfile && (
+              <div className="flex sm:hidden gap-2 mt-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => navigate("/whispers")}
+                >
+                  <MessageSquare size={16} className="mr-2" />
+                  Messages
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => setRecognitionModalOpen(true)}
+                >
+                  <Eye size={16} className="mr-2" />
+                  Recognitions
+                </Button>
+              </div>
+            )}
+            
+            {/* Non-own profile mobile whisper button */}
+            {!isOwnProfile && (
+              <div className="flex sm:hidden mt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleWhisperClick}
+                >
+                  <Send size={16} className="mr-2" />
+                  Whisper
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-          <div className="border-t border-border my-2 sm:my-2"></div>
 
-          <div className="space-y-2">
-            <h3 className="text-sm sm:text-base font-medium">Your Anonymous Identity</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground">
+        {/* Main Content */}
+        <CardContent className="p-3 sm:p-4 md:p-6 pt-3">
+          <div className="border-t border-border my-2 sm:my-3"></div>
+
+          <div className="space-y-3">
+            <h3 className="text-sm sm:text-base font-medium">
+              Your Anonymous Identity
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">
               {profileData?.bio ||
                 user.bio ||
                 `In Undercover, you're known as ${displayedAlias}. This identity stays consistent throughout your experience.`}
             </p>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <StatsCard
+                icon={<Grid size={16} className="text-undercover-purple" />}
+                value={userStats.posts}
+                label="Posts"
+              />
+              <StatsCard
+                icon={<Eye size={16} className="text-undercover-purple" />}
+                value={userStats.recognizedBy}
+                label="Recognized by"
+                onClick={() => setRecognitionModalOpen(true)}
+                clickable
+              />
+              <StatsCard
+                icon={<Eye size={16} className="text-undercover-purple" />}
+                value={userStats.recognized}
+                label="Recognized"
+                onClick={() => setRecognitionModalOpen(true)}
+                clickable
+              />
+              <StatsCard  
+                icon={<Grid size={16} className="text-undercover-purple" />}
+                value={`${userStats.recognitionRate}%`}
+                label="Recognition rate"
+              />
+            </div>
           </div>
 
-          {profileData && (
-            <RecognitionStats
-              profile={profileData}
-              onOpenRecognitionModal={() => setRecognitionModalOpen(true)}
-            />
-          )}
-
+          {/* Rewards Section */}
           {profileData?.claimedRewards?.length > 0 && (
-            <div className="mt-2 sm:mt-4">
-              <h3 className="text-sm sm:text-base font-medium flex items-center">
-                <Award size={14} className="mr-2" />
+            <div className="mt-4 sm:mt-6">
+              <h3 className="text-sm sm:text-base font-medium flex items-center mb-2">
+                <Award size={16} className="mr-2" />
                 Your Rewards
               </h3>
-              <div className="mt-2 grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {profileData.claimedRewards.map((reward, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground"
+                    className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground p-2 bg-card/50 rounded-md hover:bg-card transition-colors"
                   >
                     <span>
                       {reward.rewardType === "badge"
@@ -275,96 +354,71 @@ const ProfileComponent = ({ userId: targetUserId, anonymousAlias: targetAlias }:
         </CardContent>
       </Card>
 
+      {/* Tabs Section */}
       <Tabs defaultValue="posts" className="w-full">
-        <TabsList className="w-full grid grid-cols-2 mb-2 sm:mb-6">
-          <TabsTrigger value="posts" className="text-sm sm:text-base">
-            <Grid size={14} className="mr-2" />
+        <TabsList className="w-full grid grid-cols-2 mb-4">
+          <TabsTrigger
+            value="posts"
+            className="text-sm data-[state=active]:bg-undercover-purple data-[state=active]:text-white transition-colors"
+          >
+            <Grid size={16} className="mr-2" />
             Posts
           </TabsTrigger>
-          <TabsTrigger value="settings" className="text-sm sm:text-base">
-            <Settings size={14} className="mr-2" />
+          <TabsTrigger
+            value="settings"
+            className="text-sm data-[state=active]:bg-undercover-purple data-[state=active]:text-white transition-colors"
+          >
+            <Settings size={16} className="mr-2" />
             Settings
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="posts">
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-32 sm:h-48 w-full" />
+                <Skeleton key={i} className="h-32 sm:h-28 w-full rounded-lg" />
               ))}
             </div>
           ) : userPosts && userPosts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
               {userPosts.map((post) => (
-                <div
+                <PostCard
                   key={post._id}
-                  className="relative border rounded-lg overflow-hidden shadow-sm"
-                >
-                  <img
-                    src={post.imageUrl}
-                    alt="Post"
-                    className="w-full h-32 sm:h-48 object-cover"
-                  />
-                  {isOwnProfile && (
-                    <div className="absolute top-1 sm:top-2 right-1 sm:right-2 flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="bg-white/70 hover:bg-white w-6 h-6 sm:w-8 sm:h-8"
-                        onClick={() => navigate(`/edit-post/${post._id}`)}
-                      >
-                        <Edit className="text-black h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="bg-white/70 hover:bg-white w-6 h-6 sm:w-8 sm:h-8"
-                        onClick={() => handleDeletePost(post._id)}
-                      >
-                        <Trash2 className="text-black h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                  post={post}
+                  isOwnProfile={isOwnProfile}
+                  onEdit={() => navigate(`/edit-post/${post._id}`)}
+                  onDelete={() => handleDeletePost(post._id)}
+                />
               ))}
             </div>
           ) : (
-            <div className="text-center py-6 sm:py-12 border border-dashed rounded-lg">
-              <Image className="mx-auto h-8 sm:h-12 w-8 sm:w-12 text-muted-foreground mb-2 sm:mb-4" />
-              <h3 className="text-base sm:text-lg font-medium mb-1 sm:mb-2">No Posts Yet</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-4">Share your thoughts anonymously!</p>
-              <Button
-                onClick={() => navigate("/")}
-                className="bg-undercover-purple hover:bg-undercover-deep-purple text-sm sm:text-base"
-              >
-                Create your first post
-              </Button>
-            </div>
+            <EmptyPostsState onCreatePost={() => navigate("/")} />
           )}
         </TabsContent>
 
+        {/* Settings Tab */}
         <TabsContent value="settings">
-          <Card>
-            <CardContent className="space-y-2 sm:space-y-4 pt-4 sm:pt-6">
+          <Card className="shadow-sm">
+            <CardContent className="space-y-4 p-4 sm:p-6">
               <div className="space-y-1">
-                <h4 className="text-sm sm:text-base font-medium">Account Settings</h4>
-                <p className="text-xs sm:text-xs text-muted-foreground">
+                <h4 className="text-base font-medium">Account Settings</h4>
+                <p className="text-sm text-muted-foreground">
                   Manage your account settings and preferences.
                 </p>
               </div>
 
-              <div className="border-t border-border my-2 sm:my-4"></div>
+              <div className="border-t border-border my-3"></div>
 
-              <div className="grid grid-cols-1 gap-2 sm:gap-4">
+              <div className="space-y-2">
                 {isOwnProfile && (
                   <>
                     <Button
                       variant="outline"
                       onClick={() => navigate("/profile/settings")}
-                      className="justify-start text-sm sm:text-base"
+                      className="justify-start text-sm w-full hover:bg-gray-100 transition-colors py-2 px-3 rounded-md"
                     >
-                      <Settings size={14} className="mr-2" />
+                      <Settings size={16} className="mr-2" />
                       Account Settings
                     </Button>
                     <Button
@@ -374,9 +428,9 @@ const ProfileComponent = ({ userId: targetUserId, anonymousAlias: targetAlias }:
                           logout();
                         }
                       }}
-                      className="justify-start text-sm sm:text-base"
+                      className="justify-start text-sm w-full transition-colors py-2 px-3 rounded-md"
                     >
-                      <LogOut size={14} className="mr-2" />
+                      <LogOut size={16} className="mr-2" />
                       Logout
                     </Button>
                   </>
@@ -387,11 +441,93 @@ const ProfileComponent = ({ userId: targetUserId, anonymousAlias: targetAlias }:
         </TabsContent>
       </Tabs>
 
-      <EditProfileModal open={editProfileOpen} onOpenChange={setEditProfileOpen} />
+      {/* Modals */}
+      <EditProfileModal
+        open={editProfileOpen}
+        onOpenChange={setEditProfileOpen}
+      />
       <RecognitionModal
         open={recognitionModalOpen}
         onOpenChange={setRecognitionModalOpen}
       />
+    </div>
+  );
+};
+
+const StatsCard = ({ icon, value, label, onClick = () => {}, clickable = false }) => {
+  const baseClasses = "text-center p-2 border border-undercover-purple/20 rounded-md bg-undercover-dark/10";
+  const hoverClasses = clickable
+    ? "hover:cursor-pointer hover:border-undercover-purple/50 hover:bg-undercover-dark/20 hover:shadow-[0_0_15px_rgba(147,51,234,0.3)] transition-all duration-300"
+    : "";
+
+  return (
+    <div
+      className={`${baseClasses} ${hoverClasses}`}
+      onClick={clickable ? onClick : undefined}
+    >
+      <div className="flex justify-center mb-1">{icon}</div>
+      <p className="font-bold text-sm sm:text-base">{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+    </div>
+  );
+};
+
+const PostCard = ({ post, isOwnProfile, onEdit, onDelete }) => {
+  return (
+    <div className="relative border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
+      {post.imageUrl ? (
+        <img
+          src={post.imageUrl}
+          alt="Post"
+          className="w-full h-32 sm:h-44 object-cover"
+        />
+      ) : (
+        <div className="p-3 h-32 sm:h-28 flex items-center justify-center">
+          <p className="text-sm line-clamp-4 overflow-hidden">
+            {post.content || "No content"}
+          </p>
+        </div>
+      )}
+      {isOwnProfile && (
+        <div className="absolute top-2 right-2 flex gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-white/70 hover:bg-white w-7 h-7 rounded-full"
+            onClick={onEdit}
+          >
+            <Edit className="text-black h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-white/70 hover:bg-white w-7 h-7 rounded-full"
+            onClick={onDelete}
+          >
+            <Trash2 className="text-black h-3 w-3" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Empty Posts State Component
+const EmptyPostsState = ({ onCreatePost }) => {
+  return (
+    <div className="text-center py-8 border border-dashed rounded-lg bg-card">
+      <Image className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+      <h3 className="text-lg font-medium mb-1">No Posts Yet</h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        Share your thoughts anonymously!
+      </p>
+      <Button
+        onClick={onCreatePost}
+        className="bg-undercover-purple hover:bg-undercover-deep-purple"
+      >
+        <Plus size={16} className="mr-2" />
+        Create your first post
+      </Button>
     </div>
   );
 };

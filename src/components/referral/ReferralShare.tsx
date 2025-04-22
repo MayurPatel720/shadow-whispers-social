@@ -23,6 +23,7 @@ const ReferralShare = () => {
     queryFn: getUserReferralInfo,
   });
 
+
   const handleCopyCode = () => {
     if (referralInfo?.referralCode) {
       navigator.clipboard.writeText(referralInfo.referralCode);
@@ -67,7 +68,6 @@ const ReferralShare = () => {
           shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`${shareText} ${referralUrl}`)}`;
           break;
         case "instagram":
-          // For Instagram, we can only copy to clipboard as direct sharing isn't supported
           navigator.clipboard.writeText(`${shareText} ${referralUrl}`);
           toast({
             title: "Caption copied!",

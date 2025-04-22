@@ -1,4 +1,3 @@
-// lib/api-referral.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { api } from '@/lib/api';
 import { LeaderboardEntry, ReferralProgram, ReferralStats } from '@/types/referral';
@@ -6,18 +5,10 @@ import { LeaderboardEntry, ReferralProgram, ReferralStats } from '@/types/referr
 export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
   try {
     const userResponse = await api.get('/api/users/profile');
+    
     const user = userResponse.data;
 
-    const generateStableCode = (input: string) => {
-      let hash = 0;
-      for (let i = 0; i < input.length; i++) {
-        const char = input.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-      }
-      return Math.abs(hash).toString(36).substring(0, 6).toUpperCase().padEnd(6, '0');
-    };
-    const referralCode = user._id ? generateStableCode(user._id) : 'SAMPLE';
+    const referralCode = user.referralCode || (user._id ? generateStableCode(user._id) : 'SAMPLE');
 
     const referralsCount = user.referralCount || 0;
 
@@ -50,7 +41,7 @@ export const getUserReferralInfo = async (): Promise<ReferralProgram> => {
           isUnlocked: referralsCount >= 20,
         },
       ],
-      claimedRewards: user.claimedRewards || [], // Changed from 'rewards' to 'claimedRewards'
+      claimedRewards: user.claimedRewards || [],
       leaderboardPosition: 0,
     };
 
@@ -128,4 +119,14 @@ export const trackReferralShare = async (platform: string): Promise<void> => {
     console.error('Error tracking referral share:', error);
     throw error;
   }
+};
+
+const generateStableCode = (input: string) => {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36).substring(0, 6).toUpperCase().padEnd(6, '0');
 };

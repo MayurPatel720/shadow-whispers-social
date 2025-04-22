@@ -31,11 +31,11 @@ const userSchema = new mongoose.Schema({
   posts: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Post',
+      ref: "Post",
     },
   ],
   anonymousAlias: { type: String, unique: true },
-  avatarEmoji: { type: String, default: "😎" },
+  avatarEmoji: { type: String },
   referralCode: { type: String, unique: true },
   referralCount: { type: Number, default: 0 },
   referredBy: {
@@ -79,29 +79,29 @@ const userSchema = new mongoose.Schema({
 // Generate unique anonymous alias
 userSchema.methods.generateAnonymousAlias = async function () {
   const adjectives = [
-    'Shadow', 'Neon', 'Phantom', 'Mystic', 'Ghost', 'Cosmic', 'Stealth', 'Hidden', 'Secret', 'Enigma',
-    'Veiled', 'Cryptic', 'Silent', 'Echo', 'Dusk', 'Twilight', 'Starlit', 'Gloom', 'Frost', 'Ember',
-    'Void', 'Nebula', 'Aurora', 'Lunar', 'Solar', 'Drift', 'Haze', 'Mist', 'Glimmer', 'Shade',
-    'Specter', 'Wraith', 'Chroma', 'Velvet', 'Obsidian', 'Sapphire', 'Emerald', 'Ruby', 'Onyx', 'Quartz',
-    'Dagger', 'Cloak', 'Vapor', 'Ash', 'Flame', 'Tide', 'Storm', 'Thunder', 'Lightning', 'Breeze',
-    'Raven', 'Falcon', 'Owl', 'Hawk', 'Eagle', 'Sparrow', 'Crow', 'Dove', 'Swan', 'Phoenix',
-    'Serpent', 'Dragon', 'Wyrm', 'Griffin', 'Sphinx', 'Chimera', 'Basilisk', 'Hydra', 'Kraken', 'Leviathan',
-    'Wolf', 'Fox', 'Lynx', 'Panther', 'Tiger', 'Lion', 'Bear', 'Stag', 'Elk', 'Moose',
-    'Viper', 'Cobra', 'Python', 'Scorpion', 'Spider', 'Hornet', 'Wasp', 'Beetle', 'Mantis', 'Locust',
-    'Comet', 'Meteor', 'Galaxy', 'Orbit', 'Nexus', 'Pulse', 'Quantum', 'Radiant', 'Ethereal', 'Celestial'
+    "Shadow", "Neon", "Phantom", "Mystic", "Ghost", "Cosmic", "Stealth", "Hidden", "Secret", "Enigma",
+    "Veiled", "Cryptic", "Silent", "Echo", "Dusk", "Twilight", "Starlit", "Gloom", "Frost", "Ember",
+    "Void", "Nebula", "Aurora", "Lunar", "Solar", "Drift", "Haze", "Mist", "Glimmer", "Shade",
+    "Specter", "Wraith", "Chroma", "Velvet", "Obsidian", "Sapphire", "Emerald", "Ruby", "Onyx", "Quartz",
+    "Dagger", "Cloak", "Vapor", "Ash", "Flame", "Tide", "Storm", "Thunder", "Lightning", "Breeze",
+    "Raven", "Falcon", "Owl", "Hawk", "Eagle", "Sparrow", "Crow", "Dove", "Swan", "Phoenix",
+    "Serpent", "Dragon", "Wyrm", "Griffin", "Sphinx", "Chimera", "Basilisk", "Hydra", "Kraken", "Leviathan",
+    "Wolf", "Fox", "Lynx", "Panther", "Tiger", "Lion", "Bear", "Stag", "Elk", "Moose",
+    "Viper", "Cobra", "Python", "Scorpion", "Spider", "Hornet", "Wasp", "Beetle", "Mantis", "Locust",
+    "Comet", "Meteor", "Galaxy", "Orbit", "Nexus", "Pulse", "Quantum", "Radiant", "Ethereal", "Celestial",
   ];
 
   const nouns = [
-    'Fox', 'Wolf', 'Spirit', 'Specter', 'Raven', 'Whisperer', 'Phantom', 'Ghost', 'Shadow', 'Guardian',
-    'Knight', 'Wanderer', 'Sage', 'Seer', 'Oracle', 'Prophet', 'Mystic', 'Shaman', 'Druid', 'Bard',
-    'Rogue', 'Assassin', 'Hunter', 'Tracker', 'Scout', 'Ranger', 'Warrior', 'Paladin', 'Sorcerer', 'Wizard',
-    'Star', 'Moon', 'Sun', 'Dawn', 'Dusk', 'Night', 'Day', 'Sky', 'Cloud', 'Storm',
-    'Tide', 'Wave', 'Current', 'Stream', 'River', 'Lake', 'Ocean', 'Sea', 'Island', 'Shore',
-    'Flame', 'Ember', 'Spark', 'Blaze', 'Fire', 'Ash', 'Smoke', 'Mist', 'Fog', 'Haze',
-    'Blade', 'Sword', 'Dagger', 'Axe', 'Spear', 'Bow', 'Shield', 'Armor', 'Helm', 'Cloak',
-    'Path', 'Trail', 'Road', 'Journey', 'Quest', 'Voyage', 'Odyssey', 'Trek', 'Venture', 'Pilgrim',
-    'Echo', 'Chime', 'Pulse', 'Rhythm', 'Harmony', 'Melody', 'Song', 'Hymn', 'Ballad', 'Dirge',
-    'Peak', 'Ridge', 'Cliff', 'Valley', 'Canyon', 'Forest', 'Grove', 'Meadow', 'Plain', 'Desert'
+    "Fox", "Wolf", "Spirit", "Specter", "Raven", "Whisperer", "Phantom", "Ghost", "Shadow", "Guardian",
+    "Knight", "Wanderer", "Sage", "Seer", "Oracle", "Prophet", "Mystic", "Shaman", "Druid", "Bard",
+    "Rogue", "Assassin", "Hunter", "Tracker", "Scout", "Ranger", "Warrior", "Paladin", "Sorcerer", "Wizard",
+    "Star", "Moon", "Sun", "Dawn", "Dusk", "Night", "Day", "Sky", "Cloud", "Storm",
+    "Tide", "Wave", "Current", "Stream", "River", "Lake", "Ocean", "Sea", "Island", "Shore",
+    "Flame", "Ember", "Spark", "Blaze", "Fire", "Ash", "Smoke", "Mist", "Fog", "Haze",
+    "Blade", "Sword", "Dagger", "Axe", "Spear", "Bow", "Shield", "Armor", "Helm", "Cloak",
+    "Path", "Trail", "Road", "Journey", "Quest", "Voyage", "Odyssey", "Trek", "Venture", "Pilgrim",
+    "Echo", "Chime", "Pulse", "Rhythm", "Harmony", "Melody", "Song", "Hymn", "Ballad", "Dirge",
+    "Peak", "Ridge", "Cliff", "Valley", "Canyon", "Forest", "Grove", "Meadow", "Plain", "Desert",
   ];
 
   const maxAttempts = 10;
@@ -114,7 +114,7 @@ userSchema.methods.generateAnonymousAlias = async function () {
     alias = `${randomAdjective}${randomNoun}`;
 
     // Check if alias is unique
-    const existingUser = await this.model('User').findOne({ anonymousAlias: alias });
+    const existingUser = await this.model("User").findOne({ anonymousAlias: alias });
     if (!existingUser) {
       this.anonymousAlias = alias;
       return alias;
@@ -129,9 +129,16 @@ userSchema.methods.generateAnonymousAlias = async function () {
   return alias;
 };
 
-userSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
+// Generate random avatar emoji
+const avatarEmojis = [
+  "🎭", "👻", "🕶️", "🦊", "🐺", "🦉", "🦅", "🦇", "🐲",
+  "🌑", "✨", "💫", "⚡", "🔮", "🎪", "🎯", "🎲", "🃏",
+  "🦹", "🥷", "👤", "👥", "🕵️", "🧙", "🧠", "👁️", "💭",
+  "🌟", "🌙", "🌞", "🌈", "🍀", "🎃", "🎄", "🎆", "🎇",
+  "🏹", "🛡️", "⚔️", "🔥", "💧", "🌊", "🌪️", "❄️", "🍁",
+  "🐴", "🐘", "🐆", "🐍", "🦎", "🦂", "🕸️", "🐝", "🐞",
+  "🚀", "🌌", "🪐", "☄️", "🌠", "💎", "🎸", "🎹", "🎻",
+];
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
@@ -139,6 +146,16 @@ userSchema.pre("save", async function (next) {
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+
+  // Set random avatarEmoji if not already set
+  if (!this.avatarEmoji) {
+    const randomIndex = Math.floor(Math.random() * avatarEmojis.length);
+    this.avatarEmoji = avatarEmojis[randomIndex];
+  }
 });
+
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
 
 module.exports = mongoose.model("User", userSchema);
