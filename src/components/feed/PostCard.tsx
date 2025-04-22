@@ -10,6 +10,7 @@ import {
   Send,
   Eye,
   Share2,
+  MousePointer2,
 } from 'lucide-react';
 import {
   Card,
@@ -423,8 +424,8 @@ const PostCard: React.FC<PostCardProps> = ({
                   className="flex items-center space-x-1 text-xs"
                   disabled={isSharing}
                 >
-                  <Share2 size={16} />
-                  <span>{shareCount}</span>
+<MousePointer2 size={16} className="rotate-90" />
+<span>{shareCount}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
