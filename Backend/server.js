@@ -97,7 +97,7 @@ const io = new Server(server, {
 // Middleware
 app.use(cors({
   origin: [
-    'https://shadow-whispers-social.lovable.app',
+    'https://underkover.in',
     'http://localhost:8080',
     'http://localhost:3000',
   ],
