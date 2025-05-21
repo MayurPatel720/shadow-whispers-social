@@ -17,7 +17,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-      'https://shadow-whispers-social.lovable.app',
+          'https://underkover.in',
       'http://localhost:8080',
       'http://localhost:3000', // Add common React port
     ],
