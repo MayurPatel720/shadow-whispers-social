@@ -5,6 +5,8 @@ const User = require("../models/userModel");
 const { generateToken } = require("../utils/jwtHelper"); 
 const { generateAnonymousAlias, generateAvatar } = require("../utils/generators");
 const Post = require("../models/postModel");
+const { sendPasswordResetEmail, sendVerificationEmail, generateOTP } = require("../utils/emailService");
+const crypto = require("crypto");
 
 // @desc    Register a new user
 // @route   POST /api/users/register
@@ -29,6 +31,10 @@ const registerUser = asyncHandler(async (req, res) => {
 	const anonymousAlias = generateAnonymousAlias();
 	const avatarEmoji = generateAvatar();
 
+	// ---- EMAIL VERIFICATION ----
+	const otp = generateOTP();
+	const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 min from now
+
 	// Create user
 	const user = await User.create({
 		username,
@@ -40,7 +46,19 @@ const registerUser = asyncHandler(async (req, res) => {
 		referralCode,
 		gender: gender || undefined,
 		interests: interests || [],
+		isEmailVerified: false,
+		emailVerificationOTP: otp,
+		emailVerificationOTPExpire: otpExpire,
 	});
+
+	// Send verification email
+	try {
+		await sendVerificationEmail(email, otp);
+		console.log(`Verification email sent to ${email} with OTP: ${otp}`);
+	} catch (emailError) {
+		console.error("Failed to send verification email:", emailError);
+		// Don't fail registration if email fails, but log it
+	}
 
 	if (user) {
 		res.status(201).json({
@@ -50,10 +68,8 @@ const registerUser = asyncHandler(async (req, res) => {
 			email: user.email,
 			anonymousAlias: user.anonymousAlias,
 			avatarEmoji: user.avatarEmoji,
+			isEmailVerified: user.isEmailVerified,
 			token: generateToken(user._id),
-			gender: user.gender,
-			interests: user.interests,
-			premiumMatchUnlocks: user.premiumMatchUnlocks || 0,
 		});
 	} else {
 		res.status(400);
@@ -104,6 +120,7 @@ const loginUser = asyncHandler(async (req, res) => {
 			email: user.email,
 			anonymousAlias: user.anonymousAlias,
 			avatarEmoji: user.avatarEmoji,
+			isEmailVerified: user.isEmailVerified,
 			token: generateToken(user._id)
 		});
 	} catch (err) {
@@ -138,6 +155,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
 			gender: user.gender,
 			interests: user.interests || [],
 			premiumMatchUnlocks: user.premiumMatchUnlocks || 0,
+			isEmailVerified: user.isEmailVerified,
 		});
 	} else {
 		res.status(404);
@@ -184,6 +202,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 		gender: updatedUser.gender,
 		interests: updatedUser.interests || [],
 		premiumMatchUnlocks: updatedUser.premiumMatchUnlocks || 0,
+		isEmailVerified: updatedUser.isEmailVerified,
 		token: generateToken(updatedUser._id),
 	});
 });
@@ -462,6 +481,234 @@ const getUserPosts = asyncHandler(async (req, res) => {
 	res.json(posts);
 });
 
+// @desc    Send password reset email
+// @route   POST /api/users/forgot-password
+// @access  Public
+const forgotPassword = asyncHandler(async (req, res) => {
+	const { email } = req.body;
+
+	if (!email) {
+		res.status(400);
+		throw new Error("Please provide an email address");
+	}
+
+	const user = await User.findOne({ email });
+
+	if (!user) {
+		res.status(404);
+		throw new Error("No user found with this email address");
+	}
+
+	// Get reset token
+	const resetToken = user.getResetPasswordToken();
+
+	await user.save({ validateBeforeSave: false });
+
+	try {
+		await sendPasswordResetEmail(email, resetToken);
+
+		res.status(200).json({
+			success: true,
+			message: "Password reset email sent successfully",
+		});
+	} catch (error) {
+		console.error("Error sending password reset email:", error);
+		user.resetPasswordToken = undefined;
+		user.resetPasswordExpire = undefined;
+
+		await user.save({ validateBeforeSave: false });
+
+		res.status(500);
+		throw new Error("Email could not be sent. Please try again later.");
+	}
+});
+
+// @desc    Reset password
+// @route   PUT /api/users/reset-password/:resettoken
+// @access  Public
+const resetPassword = asyncHandler(async (req, res) => {
+	const { password } = req.body;
+
+	if (!password) {
+		res.status(400);
+		throw new Error("Please provide a new password");
+	}
+
+	if (password.length < 6) {
+		res.status(400);
+		throw new Error("Password must be at least 6 characters long");
+	}
+
+	// Get hashed token
+	const resetPasswordToken = crypto
+		.createHash("sha256")
+		.update(req.params.resettoken)
+		.digest("hex");
+
+	const user = await User.findOne({
+		resetPasswordToken,
+		resetPasswordExpire: { $gt: Date.now() },
+	});
+
+	if (!user) {
+		res.status(400);
+		throw new Error("Invalid or expired reset token");
+	}
+
+	// Set new password
+	user.password = password;
+	user.resetPasswordToken = undefined;
+	user.resetPasswordExpire = undefined;
+
+	await user.save();
+
+	res.status(200).json({
+		success: true,
+		message: "Password reset successful",
+		token: generateToken(user._id),
+	});
+});
+
+// @desc    Verify email
+// @route   POST /api/users/verify-email
+// @access  Public
+const verifyEmail = asyncHandler(async (req, res) => {
+	const { email, otp } = req.body;
+
+	if (!email || !otp) {
+		res.status(400);
+		throw new Error("Email and OTP are required");
+	}
+
+	// Validate email format
+	const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+	if (!emailRegex.test(email)) {
+		res.status(400);
+		throw new Error("Invalid email format");
+	}
+
+	// Validate OTP format (should be 6 digits)
+	if (!/^\d{6}$/.test(otp)) {
+		res.status(400);
+		throw new Error("OTP must be exactly 6 digits");
+	}
+
+	const user = await User.findOne({ email });
+
+	if (!user) {
+		res.status(404);
+		throw new Error("User not found");
+	}
+
+	if (user.isEmailVerified) {
+		return res.status(400).json({ 
+			success: false,
+			message: "Email already verified" 
+		});
+	}
+
+	if (!user.emailVerificationOTP || !user.emailVerificationOTPExpire) {
+		res.status(400);
+		throw new Error("No OTP generated. Please request a new verification email.");
+	}
+
+	if (user.emailVerificationOTPExpire < Date.now()) {
+		// Clear expired OTP
+		user.emailVerificationOTP = undefined;
+		user.emailVerificationOTPExpire = undefined;
+		await user.save();
+		
+		res.status(400);
+		throw new Error("OTP has expired. Please request a new verification email.");
+	}
+
+	if (user.emailVerificationOTP !== otp) {
+		res.status(400);
+		throw new Error("Invalid OTP. Please check your code and try again.");
+	}
+
+	// Success - verify the email
+	user.isEmailVerified = true;
+	user.emailVerificationOTP = undefined;
+	user.emailVerificationOTPExpire = undefined;
+	await user.save();
+
+	console.log(`Email verified successfully for user: ${user.email}`);
+
+	res.status(200).json({ 
+		success: true, 
+		message: "Email verified successfully",
+		user: {
+			_id: user._id,
+			email: user.email,
+			isEmailVerified: user.isEmailVerified
+		}
+	});
+});
+
+// @desc    Resend email verification OTP
+// @route   POST /api/users/resend-verification-email
+// @access  Public
+const resendVerificationEmail = asyncHandler(async (req, res) => {
+	const { email } = req.body;
+
+	if (!email) {
+		res.status(400);
+		throw new Error("Email is required");
+	}
+
+	// Validate email format
+	const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+	if (!emailRegex.test(email)) {
+		res.status(400);
+		throw new Error("Invalid email format");
+	}
+
+	const user = await User.findOne({ email });
+
+	if (!user) {
+		res.status(404);
+		throw new Error("User not found");
+	}
+
+	if (user.isEmailVerified) {
+		return res.status(400).json({ 
+			success: false,
+			message: "Email already verified" 
+		});
+	}
+
+	// Check if we should rate limit (optional - prevent spam)
+	const lastOTPTime = user.emailVerificationOTPExpire ? 
+		new Date(user.emailVerificationOTPExpire.getTime() - 10 * 60 * 1000) : null;
+	
+	if (lastOTPTime && (Date.now() - lastOTPTime.getTime()) < 60000) { // 1 minute rate limit
+		res.status(429);
+		throw new Error("Please wait at least 1 minute before requesting a new OTP");
+	}
+
+	const otp = generateOTP();
+	const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+	user.emailVerificationOTP = otp;
+	user.emailVerificationOTPExpire = otpExpire;
+	await user.save();
+
+	try {
+		await sendVerificationEmail(email, otp);
+		console.log(`Verification email resent to ${email} with OTP: ${otp}`);
+
+		res.status(200).json({ 
+			success: true, 
+			message: "Verification email resent successfully" 
+		});
+	} catch (error) {
+		console.error("Failed to resend verification email:", error);
+		res.status(500);
+		throw new Error("Failed to send verification email. Please try again later.");
+	}
+});
+
 module.exports = {
 	registerUser,
 	loginUser,
@@ -474,5 +721,9 @@ module.exports = {
 	revokeRecognition,
 	getUserById,
 	updateOneSignalPlayerId,
-	getUserPosts, // EXPORT HERE!
+	getUserPosts,
+	forgotPassword,
+	resetPassword,
+	verifyEmail,
+	resendVerificationEmail,
 };
