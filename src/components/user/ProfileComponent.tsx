@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,14 +18,22 @@ import {
 	Send,
 	Plus,
 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getUserProfile, getUserPosts, deletePost } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import EditProfileModal from "./EditProfileModal";
+import EditPostModal from "@/components/feed/EditPostModal";
+import DeletePostDialog from "@/components/feed/DeletePostDialog";
 import RecognitionModal from "@/components/recognition/RecognitionModal";
 import { toast } from "@/hooks/use-toast";
 import { User, Post } from "@/types/user";
+import { Textarea } from "@/components/ui/textarea";
+import ProfileHeader from "./ProfileHeader";
+import ProfileStats from "./ProfileStats";
+import PostsGrid from "./PostsGrid";
+import ProfileSettings from "./ProfileSettings";
 
 interface ProfileComponentProps {
 	userId?: string;
@@ -39,6 +48,14 @@ const ProfileComponent = ({
 	const navigate = useNavigate();
 	const [editProfileOpen, setEditProfileOpen] = useState(false);
 	const [recognitionModalOpen, setRecognitionModalOpen] = useState(false);
+	const [editPostModalOpen, setEditPostModalOpen] = useState(false);
+	const [deletePostDialogOpen, setDeletePostDialogOpen] = useState(false);
+	const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+
+	// For "Your Matches"
+	const [matchesModalOpen, setMatchesModalOpen] = useState(false);
+	// To trigger edit profile if missing data for matches:
+	const [forceProfileEdit, setForceProfileEdit] = useState(false);
 
 	const isOwnProfile = !targetUserId || targetUserId === user?._id;
 	const currentUserId = isOwnProfile ? user?._id : targetUserId;
@@ -81,26 +98,26 @@ const ProfileComponent = ({
 		},
 	});
 
-	const handleDeletePost = async (postId: string) => {
-		const confirmDelete = window.confirm(
-			"Are you sure you want to delete this post?"
-		);
-		if (!confirmDelete) return;
+	const handleEditPost = (post: Post) => {
+		setSelectedPost(post);
+		setEditPostModalOpen(true);
+	};
 
-		try {
-			await deletePost(postId);
-			toast({
-				title: "Post deleted",
-				description: "Your post has been successfully deleted.",
-			});
-			refetch();
-		} catch (error) {
-			toast({
-				variant: "destructive",
-				title: "Failed to delete post",
-				description: "Please try again later.",
-			});
-		}
+	const handleDeletePost = (post: Post) => {
+		setSelectedPost(post);
+		setDeletePostDialogOpen(true);
+	};
+
+	const handlePostUpdated = () => {
+		refetch();
+		setEditPostModalOpen(false);
+		setSelectedPost(null);
+	};
+
+	const handlePostDeleted = () => {
+		refetch();
+		setDeletePostDialogOpen(false);
+		setSelectedPost(null);
 	};
 
 	const handleWhisperClick = () => {
@@ -115,6 +132,32 @@ const ProfileComponent = ({
 		}
 	};
 
+	const handleEditModal = () => {
+		setEditProfileOpen(true);
+	};
+
+	const handleShowMatches = () => {
+		setMatchesModalOpen(true);
+	};
+
+	const handleShowMessages = () => {
+		navigate("/whispers");
+	};
+
+	const showMatchesModal = () => setMatchesModalOpen(true);
+
+	// Callback sent to YourMatchesModal—to be called if matches can't be loaded due to missing gender/interests
+	const handleRequireProfileEditForMatches = () => {
+		setMatchesModalOpen(false);
+		setEditProfileOpen(true);
+		setForceProfileEdit(true);
+	};
+
+	// When the edit profile modal closes, clear the force flag
+	useEffect(() => {
+		if (!editProfileOpen) setForceProfileEdit(false);
+	}, [editProfileOpen]);
+
 	const isLoading = profileLoading || postsLoading;
 
 	if (!user) return null;
@@ -122,6 +165,12 @@ const ProfileComponent = ({
 	const displayedAlias = isOwnProfile
 		? profileData?.anonymousAlias || user.anonymousAlias || "Unknown User"
 		: targetAlias || profileData?.anonymousAlias || "Unknown User";
+
+	// FOR BIO: show the user's bio (profileData), but fallback to user.bio or a default
+	const profileBio =
+		profileData?.bio ||
+		user.bio ||
+		`In Undercover, you're known as ${displayedAlias}. This identity stays consistent throughout your experience.`;
 
 	const userStats = {
 		posts: userPosts?.length || 0,
@@ -143,182 +192,46 @@ const ProfileComponent = ({
 			(reward) => reward.rewardType === "badge" && reward.status === "completed"
 		) || [];
 
+	// If user is not verified and this is their own profile, block posting
+	const blockPost = isOwnProfile && user && !user.isEmailVerified;
+
 	return (
-		<div className="max-w-4xl w-full mx-auto px-2 py-2 sm:px-4 sm:py-4">
+		<div className="w-full max-w-4xl mx-auto px-2 py-2 sm:px-4 sm:py-4">
+			{blockPost && (
+				<div className="mb-4 flex items-center gap-2 px-4 py-2 bg-yellow-100 border border-yellow-300 rounded shadow-sm">
+					<AlertTriangle className="text-yellow-500" size={20} />
+					<span className="text-sm font-medium text-yellow-800">
+						To post, chat, or use all features, please verify your email in the Settings tab below.
+					</span>
+				</div>
+			)}
 			<Card className="bg-card shadow-md border border-undercover-purple/20 mb-4">
-				{/* Header Section */}
-				<CardHeader className="p-3 sm:p-4 md:p-6 pb-0">
-					<div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-						{/* Avatar and Name Section with Edit Button on mobile */}
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-3">
-								<div className="h-14 w-14 sm:h-16 sm:w-16 flex items-center justify-center rounded-full bg-undercover-dark text-2xl sm:text-3xl">
-									{profileData?.avatarEmoji || user.avatarEmoji || "🎭"}
-								</div>
-								<div>
-									<CardTitle className="text-lg sm:text-xl text-undercover-light-purple">
-										{displayedAlias}
-									</CardTitle>
-									<p className="text-xs sm:text-sm text-muted-foreground">
-										@{profileData?.username || user.username}
-									</p>
-									{claimedBadges.length > 0 && (
-										<div className="flex gap-1 mt-1">
-											{claimedBadges.map((reward) => (
-												<span
-													key={reward.tierLevel}
-													className="text-lg"
-													title="Shadow Recruiter Badge"
-												>
-													{reward.tierLevel === 1 ? "🥷" : ""}
-												</span>
-											))}
-										</div>
-									)}
-								</div>
-							</div>
-
-							{/* Only Edit Button on the same line as name (mobile only) */}
-							{isOwnProfile && (
-								<div className="sm:hidden">
-									<Button
-										variant="outline"
-										size="icon"
-										className="h-8 w-8"
-										onClick={() => setEditProfileOpen(true)}
-									>
-										<Edit size={16} />
-									</Button>
-								</div>
-							)}
-						</div>
-
-						{/* Action Buttons - Desktop view */}
-						<div className="hidden sm:flex gap-2">
-							{isOwnProfile ? (
-								<>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setEditProfileOpen(true)}
-									>
-										<Edit size={16} className="mr-2" />
-										Edit
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => navigate("/whispers")}
-									>
-										<MessageSquare size={16} className="mr-2" />
-										Messages
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setRecognitionModalOpen(true)}
-									>
-										<Eye size={16} className="mr-2" />
-										Recognitions
-									</Button>
-								</>
-							) : (
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleWhisperClick}
-								>
-									<Send size={16} className="mr-2" />
-									Whisper
-								</Button>
-							)}
-						</div>
-
-						{/* Mobile view - second row of buttons */}
-						{isOwnProfile && (
-							<div className="flex sm:hidden gap-2 mt-2">
-								<Button
-									variant="outline"
-									size="sm"
-									className="flex-1"
-									onClick={() => navigate("/whispers")}
-								>
-									<MessageSquare size={16} className="mr-2" />
-									Messages
-								</Button>
-								<Button
-									className="flex-1"
-									variant="outline"
-									size="sm"
-									onClick={() => setRecognitionModalOpen(true)}
-								>
-									<Eye size={16} className="mr-2" />
-									Recognitions
-								</Button>
-							</div>
-						)}
-
-						{/* Non-own profile mobile whisper button */}
-						{!isOwnProfile && (
-							<div className="flex sm:hidden mt-1">
-								<Button
-									variant="outline"
-									size="sm"
-									className="w-full"
-									onClick={handleWhisperClick}
-								>
-									<Send size={16} className="mr-2" />
-									Whisper
-								</Button>
-							</div>
-						)}
-					</div>
-				</CardHeader>
-
-				{/* Main Content */}
-				<CardContent className="p-3 sm:p-4 md:p-6 pt-3">
+				<ProfileHeader
+					isOwnProfile={isOwnProfile}
+					profileData={profileData}
+					user={user}
+					displayedAlias={displayedAlias}
+					claimedBadges={claimedBadges}
+					onEdit={handleEditModal}
+					onShowMatches={handleShowMatches}
+					onShowMessages={handleShowMessages}
+					onWhisper={handleWhisperClick}
+				/>
+				<CardContent className="p-2 sm:p-4 md:p-6 pt-3">
 					<div className="border-t border-border my-2 sm:my-3"></div>
-
 					<div className="space-y-3">
 						<h3 className="text-sm sm:text-base font-medium">
-							Your Anonymous Identity
+							{isOwnProfile ? "Your Anonymous Identity" : "About this user"}
 						</h3>
-						<p className="text-sm text-muted-foreground mb-3">
-							{profileData?.bio ||
-								user.bio ||
-								`In Undercover, you're known as ${displayedAlias}. This identity stays consistent throughout your experience.`}
-						</p>
-
-						{/* Stats Cards */}
-						<div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-							<StatsCard
-								icon={<Grid size={16} className="text-undercover-purple" />}
-								value={userStats.posts}
-								label="Posts"
-							/>
-							<StatsCard
-								icon={<Eye size={16} className="text-undercover-purple" />}
-								value={userStats.recognizedBy}
-								label="Recognized by"
-								onClick={() => setRecognitionModalOpen(true)}
-								clickable
-							/>
-							<StatsCard
-								icon={<Eye size={16} className="text-undercover-purple" />}
-								value={userStats.recognized}
-								label="Recognized"
-								onClick={() => setRecognitionModalOpen(true)}
-								clickable
-							/>
-							<StatsCard
-								icon={<Grid size={16} className="text-undercover-purple" />}
-								value={`${userStats.recognitionRate}%`}
-								label="Recognition rate"
-							/>
+						<div className="text-sm text-muted-foreground mb-3 break-words whitespace-pre-line ">
+							{profileBio}
 						</div>
+						<ProfileStats
+							userStats={userStats}
+							onShowRecognitions={() => setRecognitionModalOpen(true)}
+						/>
 					</div>
-
-					{/* Rewards Section */}
+					{/* Rewards section */}
 					{profileData?.claimedRewards?.length > 0 && (
 						<div className="mt-4 sm:mt-6">
 							<h3 className="text-sm sm:text-base font-medium flex items-center mb-2">
@@ -353,8 +266,6 @@ const ProfileComponent = ({
 					)}
 				</CardContent>
 			</Card>
-
-			{/* Tabs Section */}
 			<Tabs defaultValue="posts" className="w-full">
 				<TabsList className="w-full grid grid-cols-2 mb-4">
 					<TabsTrigger
@@ -372,86 +283,73 @@ const ProfileComponent = ({
 						Settings
 					</TabsTrigger>
 				</TabsList>
-
 				<TabsContent value="posts">
-					{isLoading ? (
-						<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-							{[1, 2, 3, 4].map((i) => (
-								<Skeleton key={i} className="h-32 sm:h-28 w-full rounded-lg" />
-							))}
+					{blockPost && (
+						<div className="mb-5 rounded-md border border-yellow-300 bg-yellow-100/50 px-4 py-3 text-center text-yellow-800 font-semibold text-sm">
+							Posting is disabled until you verify your email.
 						</div>
-					) : userPosts && userPosts.length > 0 ? (
-						<div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-							{userPosts.map((post) => (
-								<PostCard
-									key={post._id}
-									post={post}
-									isOwnProfile={isOwnProfile}
-									onEdit={() => navigate(`/edit-post/${post._id}`)}
-									onDelete={() => handleDeletePost(post._id)}
-								/>
-							))}
-						</div>
-					) : (
-						<EmptyPostsState onCreatePost={() => navigate("/")} />
 					)}
+					<PostsGrid
+						isLoading={isLoading}
+						userPosts={userPosts}
+						isOwnProfile={isOwnProfile}
+						onEdit={handleEditPost}
+						onDelete={handleDeletePost}
+						onCreatePost={() => {
+							if (blockPost) {
+								toast({
+									variant: "destructive",
+									title: "Email Not Verified",
+									description: "You must verify your email before creating posts.",
+								});
+								return;
+							}
+							navigate("/");
+						}}
+					/>
 				</TabsContent>
-
-				{/* Settings Tab */}
 				<TabsContent value="settings">
-					<Card className="shadow-sm">
-						<CardContent className="space-y-4 p-4 sm:p-6">
-							<div className="space-y-1">
-								<h4 className="text-base font-medium">Account Settings</h4>
-								<p className="text-sm text-muted-foreground">
-									Manage your account settings and preferences.
-								</p>
-							</div>
-
-							<div className="border-t border-border my-3"></div>
-
-							<div className="space-y-2">
-								{isOwnProfile && (
-									<>
-										<Button
-											variant="outline"
-											onClick={() => navigate("/profile/settings")}
-											className="justify-start text-sm w-full hover:bg-gray-100 transition-colors py-2 px-3 rounded-md"
-										>
-											<Settings size={16} className="mr-2" />
-											Account Settings
-										</Button>
-										<Button
-											variant="destructive"
-											onClick={() => {
-												if (
-													window.confirm("Are you sure you want to log out?")
-												) {
-													logout();
-												}
-											}}
-											className="justify-start text-sm w-full transition-colors py-2 px-3 rounded-md"
-										>
-											<LogOut size={16} className="mr-2" />
-											Logout
-										</Button>
-									</>
-								)}
-							</div>
-						</CardContent>
-					</Card>
+					<ProfileSettings
+						isOwnProfile={isOwnProfile}
+						onAccountSettings={() => navigate("/profile/settings")}
+						onLogout={() => {
+							if (window.confirm("Are you sure you want to log out?")) logout();
+						}}
+					/>
 				</TabsContent>
 			</Tabs>
-
-			{/* Modals */}
 			<EditProfileModal
 				open={editProfileOpen}
 				onOpenChange={setEditProfileOpen}
 			/>
+			{/* Your Matches Modal */}
+			{/* Only import if really used */}
+			{/* If needed: */}
+			{/* <YourMatchesModal */}
+			{/*   open={matchesModalOpen} */}
+			{/*   onOpenChange={setMatchesModalOpen} */}
+			{/*   requireProfileEdit={handleRequireProfileEditForMatches} */}
+			{/* /> */}
 			<RecognitionModal
 				open={recognitionModalOpen}
 				onOpenChange={setRecognitionModalOpen}
 			/>
+			{selectedPost && (
+				<>
+					<EditPostModal
+						open={editPostModalOpen}
+						onOpenChange={setEditPostModalOpen}
+						post={selectedPost}
+						onSuccess={handlePostUpdated}
+					/>
+					<DeletePostDialog
+						open={deletePostDialogOpen}
+						onOpenChange={setDeletePostDialogOpen}
+						postId={selectedPost._id}
+						onSuccess={handlePostDeleted}
+					/>
+				</>
+			)}
 		</div>
 	);
 };
@@ -521,7 +419,6 @@ const PostCard = ({ post, isOwnProfile, onEdit, onDelete }) => {
 	);
 };
 
-// Empty Posts State Component
 const EmptyPostsState = ({ onCreatePost }) => {
 	return (
 		<div className="text-center py-8 border border-dashed rounded-lg bg-card">

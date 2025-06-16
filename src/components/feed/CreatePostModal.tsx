@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Dialog,
@@ -11,7 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { createPost } from "@/lib/api";
-import { Ghost, ImageIcon, Loader2, X } from "lucide-react";
+import { Ghost, Loader2, X, Upload } from "lucide-react";
+import ImageSlider from "@/components/ui/image-slider";
+import MediaUpload from "@/components/ui/media-upload";
 
 interface CreatePostModalProps {
   open: boolean;
@@ -27,71 +30,231 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
   ghostCircleId,
 }) => {
   const [content, setContent] = useState("");
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [images, setImages] = useState<string[]>([]);
+  const [videos, setVideos] = useState<Array<{url: string, thumbnail?: string, duration?: number}>>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [videoFiles, setVideoFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Image must be under 5MB.",
-        variant: "destructive",
-      });
-      return;
+  const validateImageFiles = (files: File[]): File[] => {
+    const validFiles: File[] = [];
+    
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not an image file.`,
+          variant: "destructive",
+        });
+        continue;
+      }
+      
+      const maxSize = isMobile ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          title: "File too large",
+          description: `${file.name} is too large. Maximum size is ${isMobile ? '10MB' : '5MB'}.`,
+          variant: "destructive",
+        });
+        continue;
+      }
+      
+      validFiles.push(file);
     }
-
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    
+    return validFiles;
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const validateVideoFiles = (files: File[]): File[] => {
+    const validFiles: File[] = [];
+    
+    for (const file of files) {
+      if (!file.type.startsWith('video/')) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not a video file.`,
+          variant: "destructive",
+        });
+        continue;
+      }
+      
+      const maxSize = isMobile ? 100 * 1024 * 1024 : 50 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          title: "Video too large",
+          description: `${file.name} is too large. Maximum size is ${isMobile ? '100MB' : '50MB'}.`,
+          variant: "destructive",
+        });
+        continue;
+      }
+      
+      validFiles.push(file);
+    }
+    
+    return validFiles;
+  };
+
+  const handleImageSelect = (files: File[]) => {
+    console.log('Image files selected:', files);
+    const validFiles = validateImageFiles(files);
+    
+    if (validFiles.length === 0) return;
+
+    // Add to state
+    setImageFiles(prev => {
+      const newFiles = [...prev, ...validFiles];
+      console.log('Updated image files:', newFiles);
+      return newFiles;
+    });
+    
+    // Create previews
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImages(prev => {
+          const newImages = [...prev, reader.result as string];
+          console.log('Updated image previews:', newImages);
+          return newImages;
+        });
+      };
+      reader.onerror = () => {
+        toast({
+          title: "File read error",
+          description: `Could not read ${file.name}. Please try again.`,
+          variant: "destructive",
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleVideoSelect = (files: File[]) => {
+    console.log('Video files selected:', files);
+    const validFiles = validateVideoFiles(files);
+    
+    if (validFiles.length === 0) return;
+
+    // Add to state
+    setVideoFiles(prev => {
+      const newFiles = [...prev, ...validFiles];
+      console.log('Updated video files:', newFiles);
+      return newFiles;
+    });
+    
+    // Create previews
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setVideos(prev => {
+          const newVideos = [...prev, { url: reader.result as string }];
+          console.log('Updated video previews:', newVideos);
+          return newVideos;
+        });
+      };
+      reader.onerror = () => {
+        toast({
+          title: "File read error",
+          description: `Could not read ${file.name}. Please try again.`,
+          variant: "destructive",
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeVideo = (index: number) => {
+    setVideoFiles(prev => prev.filter((_, i) => i !== index));
+    setVideos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeAllMedia = () => {
+    setImageFiles([]);
+    setImages([]);
+    setVideoFiles([]);
+    setVideos([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() && !imageFile) {
+    if (!content.trim() && imageFiles.length === 0 && videoFiles.length === 0) {
       return toast({
         title: "Content required",
-        description: "Please add some text or an image to your post.",
+        description: "Please add some text, images, or videos to your post.",
         variant: "destructive",
       });
     }
 
     setIsSubmitting(true);
-    let uploadedImageUrl: string | null = null;
+    let uploadedImageUrls: string[] = [];
+    let uploadedVideoUrls: Array<{url: string, thumbnail?: string, duration?: number}> = [];
 
     try {
-      if (imageFile) {
+      if (imageFiles.length > 0) {
         setIsUploading(true);
-        const formData = new FormData();
-        formData.append("file", imageFile);
-        formData.append("upload_preset", "undercover");
+        
+        for (const file of imageFiles) {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("upload_preset", "undercover");
 
-        const res = await fetch("https://api.cloudinary.com/v1_1/ddtqri4py/image/upload", {
-          method: "POST",
-          body: formData,
-        });
+          const res = await fetch("https://api.cloudinary.com/v1_1/ddtqri4py/image/upload", {
+            method: "POST",
+            body: formData,
+          });
 
-        const data = await res.json();
-        uploadedImageUrl = data.secure_url;
-        console.log("Image uploaded to Cloudinary:", uploadedImageUrl);
-        setIsUploading(false);
+          if (!res.ok) {
+            throw new Error(`Failed to upload ${file.name}`);
+          }
+
+          const data = await res.json();
+          uploadedImageUrls.push(data.secure_url);
+        }
       }
 
-      await createPost(content, ghostCircleId, uploadedImageUrl);
+      if (videoFiles.length > 0) {
+        for (const file of videoFiles) {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("upload_preset", "undercover");
+          formData.append("resource_type", "video");
+
+          const res = await fetch("https://api.cloudinary.com/v1_1/ddtqri4py/video/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!res.ok) {
+            throw new Error(`Failed to upload ${file.name}`);
+          }
+
+          const data = await res.json();
+          uploadedVideoUrls.push({
+            url: data.secure_url,
+            thumbnail: data.eager?.[0]?.secure_url || data.secure_url.replace(/\.[^/.]+$/, ".jpg"),
+            duration: data.duration
+          });
+        }
+      }
+
+      console.log("Media uploaded:", { images: uploadedImageUrls, videos: uploadedVideoUrls });
+      setIsUploading(false);
+
+      await createPost(content, ghostCircleId, uploadedImageUrls[0], uploadedImageUrls, uploadedVideoUrls);
+      
+      // Reset form
       setContent("");
-      removeImage();
+      setImages([]);
+      setVideos([]);
+      setImageFiles([]);
+      setVideoFiles([]);
 
       toast({
         title: "Post created",
@@ -101,6 +264,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
       });
 
       onSuccess?.();
+      onOpenChange(false);
     } catch (error) {
       console.error("Error creating post:", error);
       toast({
@@ -114,9 +278,12 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
     }
   };
 
+  const totalFiles = imageFiles.length + videoFiles.length;
+  const totalSize = [...imageFiles, ...videoFiles].reduce((total, file) => total + file.size, 0);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-gray-800 text-white border-purple-600">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-gray-800 text-white border-purple-600">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-purple-300">
             {ghostCircleId ? (
@@ -143,71 +310,122 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({
             onChange={(e) => setContent(e.target.value)}
           />
 
-          {imagePreview && (
-            <div className="relative mt-3 border border-gray-600 rounded-md overflow-hidden">
-              <img
-                src={imagePreview}
-                alt="Image Preview"
-                className="w-full max-h-[200px] object-contain"
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="destructive"
-                className="absolute top-2 right-2 w-8 h-8 opacity-90 hover:opacity-100"
-                onClick={removeImage}
-              >
-                <X size={16} />
-              </Button>
+          {(images.length > 0 || videos.length > 0) && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-purple-300">
+                  Selected Media ({totalFiles}/10)
+                </h4>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  onClick={removeAllMedia}
+                  className="text-xs"
+                >
+                  <X size={12} className="mr-1" />
+                  Remove All
+                </Button>
+              </div>
+              
+              <div className="bg-gray-700 rounded-lg p-3">
+                <ImageSlider 
+                  images={images} 
+                  videos={videos}
+                  className="max-h-[300px] mb-3" 
+                />
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[150px] overflow-y-auto">
+                  {images.map((image, index) => (
+                    <div key={`image-${index}`} className="relative group">
+                      <img
+                        src={image}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-16 object-cover rounded border-2 border-gray-600"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => removeImage(index)}
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-80 hover:opacity-100"
+                      >
+                        <X size={12} />
+                      </Button>
+                    </div>
+                  ))}
+                  {videos.map((video, index) => (
+                    <div key={`video-${index}`} className="relative group">
+                      <video
+                        src={video.url}
+                        className="w-full h-16 object-cover rounded border-2 border-gray-600"
+                        muted
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => removeVideo(index)}
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-80 hover:opacity-100"
+                      >
+                        <X size={12} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="flex justify-between items-center mt-2">
-            <div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="text-purple-300 border-purple-700"
-                onClick={() => document.getElementById("image-upload")?.click()}
-                disabled={isUploading || isSubmitting}
-              >
-                <ImageIcon className="mr-2 w-4 h-4" />
-                {isUploading ? "Uploading..." : "Add Image"}
-              </Button>
-              <input
-                type="file"
-                id="image-upload"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageUpload}
-              />
+          <MediaUpload
+            onImageSelect={handleImageSelect}
+            onVideoSelect={handleVideoSelect}
+            disabled={isUploading || isSubmitting}
+            maxFiles={10}
+            currentFileCount={totalFiles}
+          />
+
+          {totalFiles > 0 && (
+            <div className="text-xs text-gray-400">
+              Total size: {totalSize > 1024 * 1024 
+                ? `${(totalSize / (1024 * 1024)).toFixed(1)}MB` 
+                : `${Math.round(totalSize / 1024)}KB`}
             </div>
+          )}
 
-            <p className="text-xs text-gray-400">
-              Post lasts 24h, 1 like = +1h.
-            </p>
-          </div>
+          {isUploading && (
+            <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-purple-300">
+                <Loader2 size={16} className="animate-spin" />
+                <span className="text-sm">Uploading files... Please wait</span>
+              </div>
+            </div>
+          )}
 
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
-              className="border-gray-600"
+              className="border-gray-600 w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="bg-purple-600 hover:bg-purple-700"
-              disabled={(!content.trim() && !imageFile) || isSubmitting}
+              className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
+              disabled={(!content.trim() && totalFiles === 0) || isSubmitting || isUploading}
             >
               {isSubmitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin mr-2" />
                   Posting...
+                </>
+              ) : isUploading ? (
+                <>
+                  <Upload size={16} className="animate-pulse mr-2" />
+                  Uploading...
                 </>
               ) : (
                 "Post Anonymously"

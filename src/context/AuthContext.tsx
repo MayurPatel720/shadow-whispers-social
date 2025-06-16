@@ -1,19 +1,24 @@
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loginUser, registerUser, getUserProfile, updateUserProfile } from '@/lib/api';
+import { loginUser, registerUser, getUserProfile, updateUserProfile, updateOneSignalPlayerId } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { User } from '@/types/user'; // Import shared User type
+import oneSignalService from '@/components/oneSignalService';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  showLoginAnimation: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, fullName: string, email: string, password: string, referralCode?: string) => Promise<void>;
+  register: (username: string, fullName: string, email: string, password: string, referralCode?: string) => Promise<User & { token: string }>;
   logout: () => void;
   updateProfile: (userData: Partial<User>) => Promise<void>;
+  setShowLoginAnimation: (show: boolean) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -21,7 +26,41 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showLoginAnimation, setShowLoginAnimation] = useState(false);
   const navigate = useNavigate();
+
+  const setupOneSignalForUser = async () => {
+    try {
+      if (!oneSignalService.isSupported()) {
+        console.log("OneSignal not supported on this device");
+        return;
+      }
+
+      const status = await oneSignalService.getSubscriptionStatus();
+      if (!status.isSubscribed) {
+        const result = await oneSignalService.requestPermissionAndSubscribe();
+        if (result.success && result.playerId) {
+          await updateOneSignalPlayerId(result.playerId);
+          console.log("OneSignal player ID registered:", result.playerId);
+        }
+      } else if (status.playerId) {
+        await updateOneSignalPlayerId(status.playerId);
+        console.log("Existing OneSignal player ID registered:", status.playerId);
+      }
+    } catch (error) {
+      console.error("Failed to setup OneSignal:", error);
+      // Don't show error to user as this is not critical
+    }
+  };
+
+  const refreshUser = async () => {
+    try {
+      const userData = await getUserProfile();
+      setUser(userData);
+    } catch (error) {
+      console.error('Failed to refresh user data', error);
+    }
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -30,6 +69,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
           const userData = await getUserProfile();
           setUser(userData);
+          // Setup OneSignal after successful auth check
+          await setupOneSignalForUser();
         } catch (error) {
           console.error('Auth token invalid', error);
           localStorage.removeItem('token');
@@ -47,11 +88,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const data = await loginUser(email, password);
       localStorage.setItem('token', data.token);
       setUser(data);
+      
+      // Setup OneSignal for the logged-in user
+      await setupOneSignalForUser();
+      
+      // Show the login animation
+      setShowLoginAnimation(true);
+      
       toast({
         title: 'Login successful',
         description: `Welcome back, ${data.username}!`,
       });
-      navigate('/');
+      
+      // Navigate after animation completes
+      setTimeout(() => {
+        navigate('/');
+      }, 4000);
     } catch (error: any) {
       console.error('Login failed', error);
       toast({
@@ -64,7 +116,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (username: string, fullName: string, email: string, password: string, referralCode?: string) => {
+  const register = async (username: string, fullName: string, email: string, password: string, referralCode?: string): Promise<User & { token: string }> => {
     try {
       setIsLoading(true);
       console.log('Registering user with data:', { username, fullName, email, referralCode });
@@ -73,9 +125,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       localStorage.setItem('token', data.token);
       setUser(data);
+      
+      // Setup OneSignal for the newly registered user
+      await setupOneSignalForUser();
+      
+      // Show the login animation for registration too
+      setShowLoginAnimation(true);
+      
       toast({
         title: 'Registration successful',
-        description: `Welcome, ${data.anonymousAlias}! Your anonymous identity has been created.`,
+        description: `Welcome, ${data.anonymousAlias || data.username}! Please check your email to verify your account.`,
       });
       if (referralCode) {
         toast({
@@ -83,7 +142,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           description: 'The referral code has been successfully applied.',
         });
       }
-      navigate('/');
+      
+      // Navigate after animation completes
+      setTimeout(() => {
+        // Instead of navigating, let App.tsx handle navigation
+      }, 4000);
+
+      return data;
     } catch (error: any) {
       console.error('Registration failed', error);
 
@@ -146,10 +211,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         isAuthenticated: !!user,
         isLoading,
+        showLoginAnimation,
         login,
         register,
         logout,
         updateProfile,
+        setShowLoginAnimation,
+        refreshUser,
       }}
     >
       {children}
