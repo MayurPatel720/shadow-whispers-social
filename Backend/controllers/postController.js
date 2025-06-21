@@ -263,20 +263,20 @@ const deletepost = asyncHandler(async (req, res) => {
 	res.json({ message: "Post deleted successfully" });
 });
 
-// @desc    Get global feed posts (not in ghost circles) with pagination
+// @desc    Get global feed posts (not in ghost circles) with pagination - PUBLIC ACCESS
 // @route   GET /api/posts/global
-// @access  Private
-
+// @access  Public
 const getGlobalFeed = asyncHandler(async (req, res) => {
 	const redis = getRedisClient();
 	// Parse pagination params
 	const limit = Math.min(Number(req.query.limit) || 20, 50); // cap limit to 50
 	const after = req.query.after; // after is a post _id (ObjectId)
 
-	// Build query
+	// Build query for public posts only
 	const query = {
 		ghostCircle: { $exists: false },
 		expiresAt: { $gt: new Date() },
+		// Only show posts that are considered public (you may want to add an isPublic field to your schema)
 	};
 	if (after) {
 		// Only get posts with _id < after, meaning older than the last loaded
@@ -313,30 +313,38 @@ const getGlobalFeed = asyncHandler(async (req, res) => {
 		}
 	}
 
-	// Paginated DB query
-	const posts = await Post.find(query)
-		.sort({ _id: -1 }) // newest first
-		.limit(limit)
-		.lean();
+	try {
+		// Paginated DB query - no authentication required for public posts
+		const posts = await Post.find(query)
+			.sort({ _id: -1 }) // newest first
+			.limit(limit)
+			.lean();
 
-	// Only cache first/default (unpaginated) page
-	if (!after && limit === 20 && redis.isAvailable()) {
-		try {
-			await redis.del(CACHE_KEYS.GLOBAL_FEED); // Force clear before write
-			await redis.setex(
-				CACHE_KEYS.GLOBAL_FEED,
-				CACHE_TTL.GLOBAL_FEED,
-				JSON.stringify(posts)
-			);
-		} catch (error) {
-			console.error("Cache storage error:", error);
+		// Only cache first/default (unpaginated) page
+		if (!after && limit === 20 && redis.isAvailable()) {
+			try {
+				await redis.del(CACHE_KEYS.GLOBAL_FEED); // Force clear before write
+				await redis.setex(
+					CACHE_KEYS.GLOBAL_FEED,
+					CACHE_TTL.GLOBAL_FEED,
+					JSON.stringify(posts)
+				);
+			} catch (error) {
+				console.error("Cache storage error:", error);
+			}
 		}
-	}
 
-	// Return results + hasMore flag for infinite scroll
-	const hasMore = posts.length === limit;
-	console.log("Global feed response:", { posts, hasMore });
-	res.status(200).json({ posts, hasMore });
+		// Return results + hasMore flag for infinite scroll
+		const hasMore = posts.length === limit;
+		console.log("Global feed response (public):", { postsCount: posts.length, hasMore });
+		res.status(200).json({ posts, hasMore });
+	} catch (error) {
+		console.error("Global feed error:", error);
+		res.status(500).json({ 
+			message: "Failed to fetch posts",
+			error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+		});
+	}
 });
 
 // @desc    Add comment to post

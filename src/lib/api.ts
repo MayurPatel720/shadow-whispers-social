@@ -5,6 +5,7 @@ import { User, Post } from "@/types/user";
 
 // Create axios instance with base URL
 const API_URL = "http://localhost:8900";
+// const API_URL = "https://backend-whisperer-fix-5ztr.vercel.app/";
 // const API_URL = "https://undercover-service.onrender.com";
 
 export const api = axios.create({
